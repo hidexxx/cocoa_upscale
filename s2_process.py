@@ -1,6 +1,5 @@
 import os
 import shutil
-
 from pyeo.apps.model_creation.download_and_preproc_area import main as dl_and_preproc
 from pyeo import raster_manipulation as ras
 from pyeo import filesystem_utilities as fs
@@ -8,32 +7,57 @@ from pyeo import filesystem_utilities as fs
 # # 2. s2
 # # 2.1 download and preprocess :output 20m merge. tif (10 bands)
 sen2cor_path = "/home/ubuntu/Downloads/Sen2Cor-02.08.00-Linux64/bin/L2A_Process"
-pyeo_path = "/home/ubuntu/Documents/Code/pyeo/pyeo/apps/model_creation/download_and_preproc_area.py"
-aoi_path = "/media/ubuntu/storage/Ghana/shp/geojson/cocoa_big.geojson"
-l1_dir = "/media/ubuntu/storage/Ghana/s2/cocoa_big/L1"
-l2_dir = "/media/ubuntu/storage/Ghana/s2/cocoa_big/L2"
-merge_10m_dir = "/media/ubuntu/storage/Ghana/s2/cocoa_big/merge_10m"
-merge_20m_dir = "/media/ubuntu/storage/Ghana/s2/cocoa_big/merge_20m"
-conf = "/media/ubuntu/storage/Ghana/s2/cocoa_big/cocoa_big.ini"
+
+aoi_path = "/media/ubuntu/Data/Ghana/cocoa_big/shp/cocoa_big_simp.geojson"
+conf = "/media/ubuntu/Data/Ghana/cocoa_big/s2/cocoa_big.ini"
+
+l1_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/L1"
+l2_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/L2"
+merge_10m_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/merge_10m"
+merge_20m_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/merge_20m"
+
 
 #
-dl_and_preproc(aoi_path=aoi_path, start_date='20180401', end_date='20180501',
-               l1_dir=l1_dir, l2_dir=l2_dir, merge_dir=merge_10m_dir, conf_path=conf,
-         download_l2_data=False, sen2cor_path=sen2cor_path, stacked_dir=None, resolution=10, cloud_cover='20',
-               bands = ("B02", "B03", "B04", "B08"))
-
-
-ras.preprocess_sen2_images(l2_dir=l2_dir, out_dir=merge_20m_dir, l1_dir=l1_dir, cloud_threshold=0,
+def do_dl_and_preproc():
+    dl_and_preproc(aoi_path=aoi_path, start_date='20180401', end_date='20180501',
+                   l1_dir=l1_dir, l2_dir=l2_dir, merge_dir=merge_10m_dir, conf_path=conf,
+             download_l2_data=False, sen2cor_path=sen2cor_path, stacked_dir=None, resolution=10, cloud_cover='20',
+                   bands = ("B02", "B03", "B04", "B08"))
+    ras.preprocess_sen2_images(l2_dir=l2_dir, out_dir=merge_20m_dir, l1_dir=l1_dir, cloud_threshold=0,
                                                     buffer_size=5, bands=("B05","B06","B07","B8A","B11","B12"), out_resolution=20)
-# #sort into different scence id
-for merged_tif in os.listdir(merge_10m_dir):
-    tile_id = fs.get_sen_2_image_tile(merged_tif)
-    try:
-        os.mkdir(tile_id)
-    except FileExistsError:
-        pass
-    shutil.move(merged_tif, tile_id)
-test
+def do_preproc_only():
+    ras.atmospheric_correction(in_directory=l1_dir, out_directory=l2_dir,
+                                                    sen2cor_path=sen2cor_path, delete_unprocessed_image=False)
+    ras.preprocess_sen2_images(l2_dir=l2_dir, out_dir=merge_10m_dir, l1_dir=l1_dir, cloud_threshold=0,
+                                                    buffer_size=5, bands=("B02", "B03", "B04", "B08"), out_resolution=10)
+
+    ras.preprocess_sen2_images(l2_dir=l2_dir, out_dir=merge_20m_dir, l1_dir=l1_dir, cloud_threshold=0,
+                                                    buffer_size=5, bands=("B05","B06","B07","B8A","B11","B12"), out_resolution=20)
+
+def sort_into_tile(indir):
+    for merged_tif in os.listdir(indir):
+        tile_id = fs.get_sen_2_image_tile(merged_tif)
+        tile_path = os.path.join(indir,tile_id)
+        try:
+            os.mkdir(tile_path)
+        except FileExistsError:
+            pass
+        shutil.move(os.path.join(indir,merged_tif), tile_path)
+
+def test_sort_into_tile():
+    sort_into_tile(indir= "/media/ubuntu/Data/Ghana/cocoa_big/s2/merge_test")
+
+def do_sort_into_tile():
+    sort_into_tile(indir=l1_dir)
+    sort_into_tile(indir=l2_dir)
+
+
+def do_cloud_free_compoiste(indir):
+    print('here')
+
+if __name__ == "__main__":
+    do_preproc_only()
+    do_sort_into_tile()
 
 
 
@@ -48,8 +72,6 @@ test
 # pyeo.raster_manipulation.preprocess_sen2_images(l2_dir=l2_dir, out_dir=merge20_dir, l1_dir=l1_dir, cloud_threshold=0,
 #                                                     buffer_size=5, bands=("B05","B06","B07","B8A","B11","B12"), out_resolution=20)
 
-# pyeo.raster_manipulation.preprocess_sen2_images(l2_dir=l2_dir, out_dir=merge20_dir, l1_dir=l1_dir, cloud_threshold=0,
-#                                                     buffer_size=5, bands=("B05","B06","B07"), out_resolution=20)
 ###### 10m bands
 
 
