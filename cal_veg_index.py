@@ -1,4 +1,7 @@
 import numpy as np
+from osgeo import gdal
+
+import general_functions
 
 def NDVI(s0, s2res='10m', scale=10000):
     '''
@@ -123,3 +126,22 @@ def cal_vegIndex(s0_10m, s0_20m):
     print_info(ireci)
     result_array = np.dstack((ndvi, ci, psri, gndvi, s2rep, ireci)).astype(int)
     return result_array
+
+def generate_veg_index_tif(tif_10m,tif_20m,out_tif):
+    g_10m, arr_10m = general_functions.read_tif(intif=tif_10m, type=np.int32)
+    g_20m, arr_20m = general_functions.read_tif(intif=tif_20m, type=np.int32)
+    veg_arr = cal_vegIndex(arr_10m,arr_20m)
+
+    veg_array_trans = np.transpose(veg_arr, (2, 0, 1))
+
+    general_functions.create_tif(filename=out_tif, g = g_10m, Nx= arr_20m.shape[1], Ny= arr_20m.shape[2],new_array=veg_array_trans, noData= 0,data_type=gdal.GDT_Int32)
+
+def test_generate_veg_tif():
+    tif_10m = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s2/s2_20180219_testsite.tif"
+    tif_20m = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s2/s2_20180219_testsite_20m_resample.tif"
+    out_tif = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s2/veg.tif"
+    generate_veg_index_tif(tif_10m,tif_20m,out_tif)
+
+
+if __name__ == "__main__":
+    test_generate_veg_tif()

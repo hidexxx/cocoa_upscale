@@ -40,15 +40,15 @@ def scale_array_to_255(in_array):
     new_arr = ((arr - arr.min()) * (1 / (arr.max() - arr.min()) * 255)).astype(np.uint8)
     return new_arr
 
-# def scale_array_to_255(in_array):
-#     scaled_array = np.zeros(in_array.shape)
-#
-#     for n in range(in_array.shape[2]):
-#         arr = in_array[:,:,n]
-#         new_arr = ((arr - arr.min()) * (1 / (arr.max() - arr.min()) * 255)).astype(np.uint8)
-#         scaled_array[:,:,n] = new_arr
-#     return scaled_array
-#     scaled_array = None
+def scale_layer_to_255(in_array):
+    scaled_array = np.zeros(in_array.shape)
+
+    for n in range(in_array.shape[2]):
+        arr = in_array[:,:,n]
+        new_arr = ((arr - arr.min()) * (1 / (arr.max() - arr.min()) * 255)).astype(np.uint8)
+        scaled_array[:,:,n] = new_arr
+    return scaled_array
+    scaled_array = None
 
 
 def test_create_quickshift_mask():

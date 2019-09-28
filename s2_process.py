@@ -48,8 +48,8 @@ def test_sort_into_tile():
     sort_into_tile(indir= "/media/ubuntu/Data/Ghana/cocoa_big/s2/merge_test")
 
 def do_sort_into_tile():
-    sort_into_tile(indir=l1_dir)
-    sort_into_tile(indir=l2_dir)
+    sort_into_tile(indir = merge_10m_dir)
+    sort_into_tile(indir = merge_20m_dir)
 
 
 def do_cloud_free_compoiste(indir):
