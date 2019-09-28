@@ -33,6 +33,7 @@ for merged_tif in os.listdir(merge_10m_dir):
     except FileExistsError:
         pass
     shutil.move(merged_tif, tile_id)
+test
 
 
 
