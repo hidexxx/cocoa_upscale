@@ -28,11 +28,12 @@ def do_dl_and_preproc():
 def do_preproc_only():
     ras.atmospheric_correction(in_directory=l1_dir, out_directory=l2_dir,
                                                     sen2cor_path=sen2cor_path, delete_unprocessed_image=False)
-    ras.preprocess_sen2_images(l2_dir=l2_dir, out_dir=merge_10m_dir, l1_dir=l1_dir, cloud_threshold=0,
-                                                    buffer_size=5, bands=("B02", "B03", "B04", "B08"), out_resolution=10)
 
-    ras.preprocess_sen2_images(l2_dir=l2_dir, out_dir=merge_20m_dir, l1_dir=l1_dir, cloud_threshold=0,
-                                                    buffer_size=5, bands=("B05","B06","B07","B8A","B11","B12"), out_resolution=20)
+    # ras.preprocess_sen2_images(l2_dir=l2_dir, out_dir=merge_10m_dir, l1_dir=l1_dir, cloud_threshold=0,
+    #                                                 buffer_size=5, bands=("B02", "B03", "B04", "B08"), out_resolution=10)
+    #
+    # ras.preprocess_sen2_images(l2_dir=l2_dir, out_dir=merge_20m_dir, l1_dir=l1_dir, cloud_threshold=0,
+    #                                                 buffer_size=5, bands=("B05","B06","B07","B8A","B11","B12"), out_resolution=20)
 
 def sort_into_tile(indir):
     for merged_tif in os.listdir(indir):

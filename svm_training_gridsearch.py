@@ -1,15 +1,17 @@
-import sys
+#import sys
 
 from sklearn import svm
 from sklearn.svm import SVC
 
-sys.path.append(r"/home/ubuntu/Documents/Code/pyeo")
+#sys.path.append(r"/home/ubuntu/Documents/Code/pyeo")
 from pyeo.classification import get_training_data
 from sklearn.model_selection import train_test_split, StratifiedShuffleSplit, GridSearchCV
 import numpy as np
+import PYEO_model
 
 
 def do_grid_search(training_shape, training_image, image_out_path, model_out_path, ):
+    PYEO_model.train_cairan_model(image_dir=s0_dir, outModel_path=outModel, bands=8, attribute='Code')
 
     features, classes = get_training_data(training_image, training_shape, attribute="Id")
     print(features.shape)
