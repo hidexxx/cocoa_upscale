@@ -57,6 +57,7 @@ def do_cloud_free_compoiste(indir):
     print('here')
 
 if __name__ == "__main__":
+    fs.init_log("ghana_s2.log")
     do_preproc_only()
     do_sort_into_tile()
 
