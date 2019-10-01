@@ -1,0 +1,11 @@
+Class key for Ghana model:
+
+Open Forest: 1
+Palm: 2
+Forest: 3
+Cocoa: 4
+Built-up: 5
+Agricultural land: 6
+AF Cococa: 7
+Transition: 8
+Oil Palm: 9
