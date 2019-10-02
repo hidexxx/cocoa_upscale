@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.datasets import load_iris
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import GridSearchCV
-
+from sklearn.externals import joblib
 import site
 import glob2
 from osgeo import ogr,osr,gdal, gdal_array
@@ -30,22 +30,22 @@ from skimage import segmentation
 
 
 
-def scale_array_to_255(in_array):
-    arr = in_array
-    new_arr = ((arr - arr.min()) * (1 / (arr.max() - arr.min()) * 255)).astype(np.uint8)
-    return new_arr
-
-def scale_to_255(intif, outtif):
-    g, array = read_tif(intif=intif)
-    scaled_array = np.zeros(array.shape)
-    for n in range(array.shape[0]):
-        arr = array[n,:,:]
-        arr[arr<0] = 0
-        new_arr = ((arr - arr.min()) * (1 / (arr.max() - arr.min()) * 255)).astype(np.uint8)
-        scaled_array[n,:,:] = new_arr
-    s2_functions.create_tif(filename=outtif,g=g,Nx=array.shape[1], Ny= array.shape[2],new_array= scaled_array,data_type=gdal.GDT_Int16,noData=0)
-    array = None
-    scaled_array = None
+# def scale_array_to_255(in_array):
+#     arr = in_array
+#     new_arr = ((arr - arr.min()) * (1 / (arr.max() - arr.min()) * 255)).astype(np.uint8)
+#     return new_arr
+#
+# def scale_to_255(intif, outtif):
+#     g, array = read_tif(intif=intif)
+#     scaled_array = np.zeros(array.shape)
+#     for n in range(array.shape[0]):
+#         arr = array[n,:,:]
+#         arr[arr<0] = 0
+#         new_arr = ((arr - arr.min()) * (1 / (arr.max() - arr.min()) * 255)).astype(np.uint8)
+#         scaled_array[n,:,:] = new_arr
+#     s2_functions.create_tif(filename=outtif,g=g,Nx=array.shape[1], Ny= array.shape[2],new_array= scaled_array,data_type=gdal.GDT_Int16,noData=0)
+#     array = None
+#     scaled_array = None
 
 
 #########################################################################
@@ -231,7 +231,17 @@ s2simp_veg_s1_bands = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s2/s2_2018
 
 #scale to 255
 s2simp_veg_s1_bands_255 = s2simp_veg_s1_bands[:-4] +'_255.tif'
-training_image_255 = scale_to_255(intif=s2simp_veg_s1_bands,outtif= s2simp_veg_s1_bands_255)
+#training_image_255 = scale_to_255(intif=s2simp_veg_s1_bands,outtif= s2simp_veg_s1_bands_255)
 
 
 #4. classify image
+out_model_path = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/ghana_gridsearch.pkl"
+image_path = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s2/s2_20180219_testsite_vegIndex_s1.tif"
+
+model = joblib.load(out_model_path)
+
+out_image = image_path[:-4] + '_classified.tif'
+
+PYEO_model.classify_image(in_image_path=image_path, model=model, out_image_path=out_image, num_chunks=20)
+
+

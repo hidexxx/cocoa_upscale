@@ -1,4 +1,5 @@
 import PYEO_model
+from sklearn.externals import joblib
 
 # def do_TPOT():
 #
@@ -17,25 +18,33 @@ import PYEO_model
 #        print(model.score(X_test, y_test))
 #        model.export(model_out_path)
 
-def do_gridSearch(training_shp, training_image, model_out_path, ):
+def do_gridSearch(training_shp, training_image, model_out_path, bands ):
     PYEO_model.train_cairan_model(image_path = training_image,shp_path=training_shp, outModel_path = model_out_path,
-                                  bands =12 ,attribute = 'Id', shape_projection_id = 32630)
+                                  bands =bands ,attribute = 'Id', shape_projection_id = 32630)
+
 def do_classify_image(model_path,in_image_path,out_image_path):
-    model = PYEO_model.load_model(model_path)
+    model = joblib.load(model_path)
     PYEO_model.classify_image(in_image_path=in_image_path,out_image_path=out_image_path,model=model)
 
 def test_do_grid_search():
     training_shape = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/shp/field_data_clip.shp"
-    training_image = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s2/s2_20180219_testsite_vegIndex_s1.tif"
-    out_image_path = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/ghana_classified_rs.tif"
-    out_model_path = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/ghana_gridsearch.pkl"
+    training_image = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s210m_vegIndex5_s1_obj.tif"
+    out_model_path = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/ghana_gridsearch_veg5_withOBJECT.pkl"
+    bands = 12
 
-    do_gridSearch(training_shp = training_shape, training_image=training_image, model_out_path = out_model_path)
-    do_classify_image(model_path=out_model_path,in_image_path=training_image,out_model_path=out_image_path)
+    do_gridSearch(training_shp = training_shape, training_image=training_image, model_out_path = out_model_path, bands= bands)
+
+def test_do_classify_image():
+    image_to_classify = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s210m_vegIndex5_s1_obj.tif"
+    out_image_path = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/ghana_classified_rs_veg5_withOBJECT.tif"
+    model_path = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/ghana_gridsearch_veg5_withOBJECT.pkl"
+
+    do_classify_image(model_path=model_path,in_image_path=image_to_classify,out_image_path=out_image_path)
 
 
 if __name__ == "__main__":
     test_do_grid_search()
+    test_do_classify_image()
 
 
 
