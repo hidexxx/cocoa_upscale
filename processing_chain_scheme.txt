@@ -1,0 +1,21 @@
+Ghana processing chain
+
+Inputs needed;
+-Area of interest
+-Date range
+-Maximum cloud cover
+-Last cloud-free pixel composite
+-Path to model
+-Path to output
+
+Step 1: Download best S2 L1 and L2
+Step 2: Download nearest S1 that covers AOI
+Step 3: Generate cloud mask from S2 L1 and L2 OR generate composite
+  --Composite must have all S2 bands
+Step 4: Generate indicies from S2 bands
+Step 5: Stack indicies, S2 10m bands, S1 bands
+Step 6: Segment based on stack
+Step 7: Add segment ID layer to stack
+Step 8: Apply classifier
+
+cocoa_forest_segregation

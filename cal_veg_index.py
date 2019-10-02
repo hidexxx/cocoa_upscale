@@ -115,16 +115,17 @@ def print_info(s0):
 def cal_vegIndex(s0_10m, s0_20m):
     ndvi = NDVI(s0=s0_10m)
     ci = CI(s0_20m=s0_20m)
-    psri = PSRI(s0_10m=s0_10m, s0_20m=s0_20m)
+    #psri = PSRI(s0_10m=s0_10m, s0_20m=s0_20m)
     gndvi = GNDVI(s0=s0_10m)
     s2rep = S2REP(s0_10m=s0_10m, s0_20m=s0_20m)
     ireci = IRECI(s0_10m=s0_10m, s0_20m=s0_20m)
     print_info(ndvi)
     print_info(ci)
-    print_info(psri)
+    #print_info(psri)
     print_info(s2rep)
     print_info(ireci)
-    result_array = np.dstack((ndvi, ci, psri, gndvi, s2rep, ireci)).astype(int)
+   # result_array = np.dstack((ndvi, ci, psri, gndvi, s2rep, ireci)).astype(int)
+    result_array = np.dstack((ndvi, ci, gndvi, s2rep, ireci)).astype(int)
     return result_array
 
 def generate_veg_index_tif(tif_10m,tif_20m,out_tif):
@@ -137,9 +138,9 @@ def generate_veg_index_tif(tif_10m,tif_20m,out_tif):
     general_functions.create_tif(filename=out_tif, g = g_10m, Nx= arr_20m.shape[1], Ny= arr_20m.shape[2],new_array=veg_array_trans, noData= 0,data_type=gdal.GDT_Int32)
 
 def test_generate_veg_tif():
-    tif_10m = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s2/s2_20180219_testsite.tif"
+    tif_10m = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s2/s2_20180219_testsite_10m.tif"
     tif_20m = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s2/s2_20180219_testsite_20m_resample.tif"
-    out_tif = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s2/veg.tif"
+    out_tif = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s2/veg_withoutPSRI.tif"
     generate_veg_index_tif(tif_10m,tif_20m,out_tif)
 
 
