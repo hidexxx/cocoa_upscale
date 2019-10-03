@@ -11,9 +11,12 @@ from sklearn.preprocessing import FunctionTransformer, RobustScaler
 from copy import copy
 import joblib
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
-from sklearn.svm import SVC
+from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier, GradientBoostingClassifier
+from sklearn.svm import LinearSVC
 from sklearn.metrics import confusion_matrix
+from sklearn.cluster import FeatureAgglomeration
+from sklearn.feature_selection import RFE
+from sklearn.neighbors import KNeighborsClassifier
 #from sklearn.preprocessing import StandardScalar
 
 init_log("experimentation.log")
@@ -61,26 +64,37 @@ f_train, f_test, l_train, l_test = train_test_split(features, labels, train_size
 #    RandomForestClassifier(bootstrap=True, criterion="gini", max_features=0.9500000000000001, min_samples_leaf=7, min_samples_split=3, n_estimators=100)
 #)
 
+#
+#model = make_pipeline(
+#            RobustScaler(),
+#            SVC(kernel='rbf', gamma=0.0769, C=512)
+#        )
 
+#exported_pipeline = make_pipeline(
+#    make_union(
+#        FunctionTransformer(copy),
+#        PCA(iterated_power=9, svd_solver="randomized")
+#    ),
+#    ExtraTreesClassifier(bootstrap=False, criterion="gini", max_features=0.2, min_samples_leaf=1, min_samples_split=8, n_estimators=100)
+#)
+
+# Average CV score on the training set was:0.8474570143032467
 model = make_pipeline(
-            RobustScaler(),
-            SVC(kernel='rbf', gamma=0.0769, C=512)
-        )
-
-exported_pipeline = make_pipeline(
-    make_union(
-        FunctionTransformer(copy),
-        PCA(iterated_power=9, svd_solver="randomized")
-    ),
-    ExtraTreesClassifier(bootstrap=False, criterion="gini", max_features=0.2, min_samples_leaf=1, min_samples_split=8, n_estimators=100)
+    FeatureAgglomeration(affinity="l2", linkage="average"),
+    RFE(estimator=ExtraTreesClassifier(criterion="entropy", max_features=0.45, n_estimators=100), step=0.7500000000000001),
+    StackingEstimator(estimator=GaussianNB()),
+    StackingEstimator(estimator=LinearSVC(C=20.0, dual=True, loss="squared_hinge", penalty="l2", tol=0.0001)),
+    StackingEstimator(estimator=KNeighborsClassifier(n_neighbors=32, p=2, weights="uniform")),
+    GradientBoostingClassifier(learning_rate=0.1, max_depth=9, max_features=0.9000000000000001, min_samples_leaf=17, min_samples_split=15, n_estimators=100, subsample=0.9500000000000001)
 )
+
 
 # Removing class 5 - it's swamping classification. Also removing segmentation
 #training_data = training_data[training_data['class'] != 5]
 
 
 
-experiment_name = "svn_with_scaling"
+experiment_name = "maybe_bad_kmeans"
 
 image_path = "data/s2_20180219_testsite_vegIndex_s1_clipped.tif"
 output_path = "outputs/{}.tif".format(experiment_name)
