@@ -7,13 +7,17 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.pipeline import make_pipeline, make_union
 from sklearn.linear_model import LogisticRegression
 from tpot.builtins import StackingEstimator, ZeroCount
-from sklearn.preprocessing import FunctionTransformer, RobustScaler
+from sklearn.preprocessing import FunctionTransformer, RobustScaler, PolynomialFeatures
 from copy import copy
 import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix
+from sklearn.decomposition import PCA
+from sklearn.cluster import FeatureAgglomeration
+from sklearn.feature_selection import RFE
+from sklearn.neighbors import KNeighborsClassifier
 #from sklearn.preprocessing import StandardScalar
 
 init_log("experimentation.log")
@@ -62,25 +66,41 @@ f_train, f_test, l_train, l_test = train_test_split(features, labels, train_size
 #)
 
 
-model = make_pipeline(
-            RobustScaler(),
-            SVC(kernel='rbf', gamma=0.0769, C=512)
-        )
+#model = make_pipeline(
+#            RobustScaler(),
+#            SVC(kernel='rbf', gamma=0.0769, C=512)
+#        )
 
-exported_pipeline = make_pipeline(
+# I think this one was ~0.7
+#model = make_pipeline(
+#    make_union(
+#        FunctionTransformer(copy),
+#        PCA(iterated_power=9, svd_solver="randomized")
+#    ),
+#    ExtraTreesClassifier(bootstrap=False, criterion="gini", max_features=0.2, min_samples_leaf=1, min_samples_split=8, n_estimators=100)
+#)
+
+# Average CV score on the training set was:0.827242848447961.
+# This then dropped to 0.5 with a different (randomly selected) training set
+# Tragically, it then dropped to 0.3 on the test from same.
+#model = make_pipeline(
+#    FeatureAgglomeration(affinity="l1", linkage="average"),
+#    RFE(estimator=ExtraTreesClassifier(criterion="gini", max_features=0.7000000000000001, n_estimators=100), step=0.35000000000000003),
+#    KNeighborsClassifier(n_neighbors=81, p=1, weights="distance")
+#)
+
+# Average CV score on the training set was:0.8399560652699689
+model = make_pipeline(
     make_union(
         FunctionTransformer(copy),
-        PCA(iterated_power=9, svd_solver="randomized")
+        FunctionTransformer(copy)
     ),
-    ExtraTreesClassifier(bootstrap=False, criterion="gini", max_features=0.2, min_samples_leaf=1, min_samples_split=8, n_estimators=100)
+    PolynomialFeatures(degree=2, include_bias=False, interaction_only=False),
+    FeatureAgglomeration(affinity="l1", linkage="complete"),
+    KNeighborsClassifier(n_neighbors=1, p=1, weights="distance")
 )
 
-# Removing class 5 - it's swamping classification. Also removing segmentation
-#training_data = training_data[training_data['class'] != 5]
-
-
-
-experiment_name = "svn_with_scaling"
+experiment_name = "k_neighbours_150"
 
 image_path = "data/s2_20180219_testsite_vegIndex_s1_clipped.tif"
 output_path = "outputs/{}.tif".format(experiment_name)
