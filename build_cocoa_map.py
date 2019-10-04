@@ -39,7 +39,7 @@ from cal_veg_index import generate_veg_index_tif
 def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_folder, path_to_config,
                     epsg_for_map, path_to_model,
                     cloud_cover=20, log_path="build_cocoa_map.log", use_sen2cor=False,
-                    sen2cor_path=None):
+                    sen2cor_path=None, skip_download_and_preprocess = False):
 
     # Step 0: Get things ready. Folder structure for downloads, load credentials from config.
     fu.init_log(log_path)
@@ -52,25 +52,26 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_f
     os.mkdir("images/stacked/with_indices")
     os.mkdir("images/stacked/with_s1")
 
-    # Step 1: Download S2 3imagery for the timescale
-    images_to_download = query.check_for_s2_data_by_date(path_to_aoi, start_date, end_date, cloud_cover)
-    if  not use_sen2cor:
-        images_to_download = query.filter_non_matching_s2_data(images_to_download)
-    else:
-        images_to_download = query.filter_to_l1_data(images_to_download)
-    query.download_s2_data(images_to_download, "images/L1", "images/L2")
+    if not skip_download_and_preprocess:
+        # Step 1: Download S2 3imagery for the timescale
+        images_to_download = query.check_for_s2_data_by_date(path_to_aoi, start_date, end_date, cloud_cover)
+        if  not use_sen2cor:
+            images_to_download = query.filter_non_matching_s2_data(images_to_download)
+        else:
+            images_to_download = query.filter_to_l1_data(images_to_download)
+        query.download_s2_data(images_to_download, "images/L1", "images/L2")
 
-    # Step 2: Preprocess S2 imagery. Perform atmospheric correction if needed, stack and mask 10 and 20m bands.
-    if use_sen2cor:
-        ras.atmospheric_correction("images/L1" "images/L2", sen2cor_path=sen2cor_path)
-    ras.preprocess_sen2_images("images/L2", "images/merged/10m", "images/L1",
-                               cloud_threshold=0, epsg= epsg_for_map,
-                               bands=("B02", "B03", "B04", "B08"),
-                               out_resolution=10)
-    ras.preprocess_sen2_images("images/L2", "images/merged/20m", "images/L1",
-                               cloud_threshold=0, epsg= epsg_for_map,
-                               bands=("B05", "B06", "B07", "B8A", "B11", "B12"),
-                               out_resolution=20)
+        # Step 2: Preprocess S2 imagery. Perform atmospheric correction if needed, stack and mask 10 and 20m bands.
+        if use_sen2cor:
+            ras.atmospheric_correction("images/L1" "images/L2", sen2cor_path=sen2cor_path)
+        ras.preprocess_sen2_images("images/L2", "images/merged/10m", "images/L1",
+                                   cloud_threshold=0, epsg= epsg_for_map,
+                                   bands=("B02", "B03", "B04", "B08"),
+                                   out_resolution=10)
+        ras.preprocess_sen2_images("images/L2", "images/merged/20m", "images/L1",
+                                   cloud_threshold=0, epsg= epsg_for_map,
+                                   bands=("B05", "B06", "B07", "B8A", "B11", "B12"),
+                                   out_resolution=20)
 
     # Could put composite here, but later.
 
@@ -115,6 +116,9 @@ if __name__ == "__main__":
                         help="If present, skip downloading of L2 data and use sen2cor for atmospheric processing.")
     parser.add_argument("--sen2cor_path", default=None, help="The path to L2AProcess. Only required if use_sen2cor"
                                                              "is True.")
+
+    parser.add_argument("--skip_download_and_preprocess", default=False, action="store_true",
+                        help="If present, skips download and preprocess")
 
     args = parser.parse_args()
 
