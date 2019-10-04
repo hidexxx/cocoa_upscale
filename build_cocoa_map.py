@@ -63,7 +63,7 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
         config = configparser.ConfigParser()
         config.read(path_to_config)
 
-        images_to_download = query.check_for_s2_data_by_date(path_to_aoi, start_date, end_date, cloud_cover)
+        images_to_download = query.check_for_s2_data_by_date(path_to_aoi, start_date, end_date, config, cloud_cover)
         if not use_sen2cor:
             images_to_download = query.filter_non_matching_s2_data(images_to_download)
         else:
