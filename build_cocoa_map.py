@@ -64,7 +64,7 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
         config.read(path_to_config)
 
         images_to_download = query.check_for_s2_data_by_date(path_to_aoi, start_date, end_date, cloud_cover)
-        if  not use_sen2cor:
+        if not use_sen2cor:
             images_to_download = query.filter_non_matching_s2_data(images_to_download)
         else:
             images_to_download = query.filter_to_l1_data(images_to_download)
@@ -90,12 +90,15 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
 
         for tile in os.listdir("images/merged/10m"):
             tile_path = os.path.join("images/merged/10m", tile)
-            ras.composite_directory(tile_path, "composites/10m")
+            this_composite_path = ras.composite_directory(tile_path, "composites/10m")
+            new_composite_path = "{}_{}.tif".format(this_composite_path.rsplit('.')[0], tile)
+            os.rename(this_composite_path, new_composite_path)
 
         for tile in os.listdir("images/merged/20m"):
             tile_path = os.path.join("images/merged/20m", tile)
-            ras.composite_directory(tile_path, "composites/20m")
-
+            this_composite_path = ras.composite_directory(tile_path, "composites/20m")
+            new_composite_path = "{}_{}.tif".format(this_composite_path.rsplit('.')[0], tile)
+            os.rename(this_composite_path, new_composite_path)
 
 
     # Step 3: Generate the bands. Time for the New Bit.
@@ -108,15 +111,17 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
                 shutil.copy(image_path_20m, resample_path_20m)
                 ras.resample_image_in_place(resample_path_20m, 10)
 
+                index_image_path = os.path.join(td, "index_image.tif")
+
                 # This bit's your show, Qing
-                generate_veg_index_tif(image_path_10m, image_path_20m, "images/stacked/with_indices"+image)
-
-
+                generate_veg_index_tif(image_path_10m, resample_path_20m, index_image_path)
+                ras.stack_images([index_image_path, image_path_10m], "images/stacked/with_indices/" + image)
 
     # Step 4: Stack the new bands with the S1 rasters
     for image in os.listdir("images/stacked/with_indices"):
         if image.endswith(".tif"):
-            ras.stack_images([image, path_to_s1_image], os.path.join("images/stacked/with_s1", image))
+            path_to_image = os.path.join("images/stacked/with_indices", image)
+            ras.stack_images([path_to_image, path_to_s1_image], os.path.join("images/stacked/with_s1", image))
 
     # Step 5: Classify with trained model
     cls.classify_directory("images/stacked/with_s1", path_to_model, "output", None, apply_mask=False)
