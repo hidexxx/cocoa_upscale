@@ -34,26 +34,35 @@ import pyeo.filesystem_utilities as fu
 import pyeo.classification as cls
 
 from cal_veg_index import generate_veg_index_tif
+from s2_process import sort_into_tile
 
 
-def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_folder, path_to_config,
+def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_image, path_to_config,
                     epsg_for_map, path_to_model,
                     cloud_cover=20, log_path="build_cocoa_map.log", use_sen2cor=False,
-                    sen2cor_path=None, skip_download_and_preprocess = False):
+                    sen2cor_path=None, skip_download_and_preprocess = False, skip_composite = False):
 
     # Step 0: Get things ready. Folder structure for downloads, load credentials from config.
     fu.init_log(log_path)
-    config = configparser.ConfigParser()
-    config.read(path_to_config)
     os.chdir(working_dir)
-    fu.create_file_structure(working_dir)
-    os.mkdir("images/merged/10m")
-    os.mkdir("images/merged/20m")
-    os.mkdir("images/stacked/with_indices")
-    os.mkdir("images/stacked/with_s1")
+    fu.create_file_structure(os.getcwd())
+    try:
+        os.mkdir("images/merged/10m")
+        os.mkdir("images/merged/20m")
+        os.mkdir("images/stacked/with_indices")
+        os.mkdir("images/stacked/with_s1")
+        os.mkdir("composites")
+        os.mkdir("composites/10m")
+        os.mkdir("composites/20m")
+    except FileExistsError:
+        pass
 
+
+    # Step 1: Download S2 3imagery for the timescale
     if not skip_download_and_preprocess:
-        # Step 1: Download S2 3imagery for the timescale
+        config = configparser.ConfigParser()
+        config.read(path_to_config)
+
         images_to_download = query.check_for_s2_data_by_date(path_to_aoi, start_date, end_date, cloud_cover)
         if  not use_sen2cor:
             images_to_download = query.filter_non_matching_s2_data(images_to_download)
@@ -70,17 +79,31 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_f
                                    out_resolution=10)
         ras.preprocess_sen2_images("images/L2", "images/merged/20m", "images/L1",
                                    cloud_threshold=0, epsg= epsg_for_map,
-                                   bands=("B05", "B06", "B07", "B8A", "B11", "B12"),
+                                   bands=("B02", "B03", "B04","B05", "B06", "B07", "B8A", "B11", "B12"),
                                    out_resolution=20)
 
-    # Could put composite here, but later.
+
+    if not skip_composite:
+        # Step 2.5: Build a pair of cloud-free composites
+        sort_into_tile("images/merged/10m")
+        sort_into_tile("images/merged/20m")
+
+        for tile in os.listdir("images/merged/10m"):
+            tile_path = os.path.join("images/merged/10m", tile)
+            ras.composite_directory(tile_path, "composites/10m")
+
+        for tile in os.listdir("images/merged/20m"):
+            tile_path = os.path.join("images/merged/20m", tile)
+            ras.composite_directory(tile_path, "composites/20m")
+
+
 
     # Step 3: Generate the bands. Time for the New Bit.
     with TemporaryDirectory() as td:
-        for image in os.listdir("images/merged/10m"):
+        for image in os.listdir("composites/10m"):
             if image.endswith(".tif"):
-                image_path_10m = os.path.join("images/merged/10m", image)
-                image_path_20m = os.path.join("images/merged/20m", image)
+                image_path_10m = os.path.join("composites/10m", image)
+                image_path_20m = os.path.join("composites/20m", image)
                 resample_path_20m = os.path.join(td, image)  # You'll probably regret this later, roberts.
                 shutil.copy(image_path_20m, resample_path_20m)
                 ras.resample_image_in_place(resample_path_20m, 10)
@@ -88,13 +111,12 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_f
                 # This bit's your show, Qing
                 generate_veg_index_tif(image_path_10m, image_path_20m, "images/stacked/with_indices"+image)
 
+
+
     # Step 4: Stack the new bands with the S1 rasters
     for image in os.listdir("images/stacked/with_indices"):
         if image.endswith(".tif"):
-            image_granule = fu.get_sen_2_granule_id(image)
-            s1_granule_images = [s1_image for s1_image in os.listdir(path_to_s1_folder) if image_granule in s1_image]
-            s1_granule_path = os.path.join(path_to_s1_folder, s1_granule_images[0])  # Going with the first image with the granule in the name for nwo
-            ras.stack_images([image, s1_granule_path], os.path.join("images/stacked/with_s1", image))
+            ras.stack_images([image, path_to_s1_image], os.path.join("images/stacked/with_s1", image))
 
     # Step 5: Classify with trained model
     cls.classify_directory("images/stacked/with_s1", path_to_model, "output", None, apply_mask=False)
@@ -106,7 +128,7 @@ if __name__ == "__main__":
     parser.add_argument("path_to_aoi", help="A path to a geojson containing the AOI.")
     parser.add_argument("start_date", help="The earlisest date to search for imagery. Format yyyymmdd.")
     parser.add_argument("end_date", help="The latest date to search for imagery. Format yyyymmdd.")
-    parser.add_argument("path_to_s1_folder", help="The path to the folder containg a stack of hh and hv imagery")
+    parser.add_argument("path_to_s1_image", help="Path to a prepared S1 raster covering the AOI")
     parser.add_argument("path_to_config", help="Path to the .ini file with your scihub credentials.")
     parser.add_argument("epsg_for_map", help="The EPSG number for the output map.")
     parser.add_argument("path_to_model", help="The path to a .pkl of a trained scikit-learn model")
@@ -119,9 +141,11 @@ if __name__ == "__main__":
 
     parser.add_argument("--skip_download_and_preprocess", default=False, action="store_true",
                         help="If present, skips download and preprocess")
+    parser.add_argument("--skip_composite", default=False, action="store_true",
+                        help="If present, skips building composite and uses existing.")
 
     args = parser.parse_args()
 
-    build_cocoa_map(args.working_dir, args.path_to_aoi, args.start_date, args.end_date, args.path_to_s1_folder,
-                    args.path_to_config, args.espg_for_map, args.path_to_model, args.cloud_cover, args.path_to_log,
-                    args.use_sen2cor, args.sen2cor_path)
+    build_cocoa_map(args.working_dir, args.path_to_aoi, args.start_date, args.end_date, args.path_to_s1_image,
+                    args.path_to_config, args.epsg_for_map, args.path_to_model, args.cloud_cover, args.path_to_log,
+                    args.use_sen2cor, args.sen2cor_path, args.skip_download_and_preprocess, args.skip_composite)
