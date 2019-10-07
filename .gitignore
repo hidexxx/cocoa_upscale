@@ -1,6 +1,7 @@
 **.tif
 **.tif.aux.xml
 **.log
+test/
 data/training_shp*
 
 .ibynp*
