@@ -40,7 +40,7 @@ from s2_process import sort_into_tile
 def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_image, path_to_config,
                     epsg_for_map, path_to_model,
                     cloud_cover=20, log_path="build_cocoa_map.log", use_sen2cor=False,
-                    sen2cor_path=None, skip_download_and_preprocess = False, skip_composite = False):
+                    sen2cor_path=None, skip_download_and_preprocess=False, skip_composite=False):
 
     # Step 0: Get things ready. Folder structure for downloads, load credentials from config.
     fu.init_log(log_path)
@@ -128,29 +128,18 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("A script for performing cocoa classification in Ghana")
-    parser.add_argument("working_dir", help="The location to keep the working imagery.")
-    parser.add_argument("path_to_aoi", help="A path to a geojson containing the AOI.")
-    parser.add_argument("start_date", help="The earlisest date to search for imagery. Format yyyymmdd.")
-    parser.add_argument("end_date", help="The latest date to search for imagery. Format yyyymmdd.")
-    parser.add_argument("path_to_s1_image", help="Path to a prepared S1 raster covering the AOI")
-    parser.add_argument("path_to_config", help="Path to the .ini file with your scihub credentials.")
-    parser.add_argument("epsg_for_map", help="The EPSG number for the output map.")
-    parser.add_argument("path_to_model", help="The path to a .pkl of a trained scikit-learn model")
-    parser.add_argument("--cloud_cover", default=20, help="The maximum cloud cover")
-    parser.add_argument("--path_to_log", default="build_cocoa_map.log", help="Where to store the logfile for this run.")
-    parser.add_argument("--use_sen2cor", default=False, action="store_true",
-                        help="If present, skip downloading of L2 data and use sen2cor for atmospheric processing.")
-    parser.add_argument("--sen2cor_path", default=None, help="The path to L2AProcess. Only required if use_sen2cor"
-                                                             "is True.")
-
-    parser.add_argument("--skip_download_and_preprocess", default=False, action="store_true",
-                        help="If present, skips download and preprocess")
-    parser.add_argument("--skip_composite", default=False, action="store_true",
-                        help="If present, skips building composite and uses existing.")
-
+    parser = argparse.ArgumentParser("A script for performing cocoa classification in Ghana. See cocoa_config.ini"
+                                     "for the parameter information.")
+    parser.add_argument("--path_to_config", help="The path to the config file containing the parameters"
+                                                 "for this run of the cocoa map")
     args = parser.parse_args()
 
-    build_cocoa_map(args.working_dir, args.path_to_aoi, args.start_date, args.end_date, args.path_to_s1_image,
-                    args.path_to_config, args.epsg_for_map, args.path_to_model, args.cloud_cover, args.path_to_log,
-                    args.use_sen2cor, args.sen2cor_path, args.skip_download_and_preprocess, args.skip_composite)
+    config = configparser.ConfigParser()
+    config.read(args.path_to_config)
+
+    cocoa_args = config['cocoa_mapping']
+
+    # Note for future maintainers; the '**' operator unpacks a dictionary (in this case, cocoa_args) into a set
+    # of keyword augments for a function. So this should pass the keywords in the config file straight into
+    # the build_cocoa_map function without us having to retype them by hand every time they change.
+    build_cocoa_map(path_to_config=args.path_to_config, **cocoa_args)
