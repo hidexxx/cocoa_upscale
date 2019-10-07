@@ -1,2 +1,6 @@
-data/
-*.log
+**.tif
+**.tif.aux.xml
+**.log
+data/training_shp*
+
+.ibynp*
