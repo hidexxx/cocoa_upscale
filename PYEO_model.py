@@ -20,7 +20,7 @@ from tpot.builtins import StackingEstimator
 
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.naive_bayes import BernoulliNB
-
+from sklearn.externals import joblib
 
 def create_matching_dataset(in_dataset, out_path,
                             format="GTiff", bands=1, datatype=None):
@@ -87,12 +87,6 @@ def get_training_data(image_path, shape_path, attribute="CODE", shape_projection
     return training_data, features
 
 def get_training_data_tif(image_path, training_tif_path):
-    """Given an image and a shapefile with categories, return x and y suitable
-    for feeding into random_forest.fit.
-    Note: THIS WILL FAIL IF YOU HAVE ANY CLASSES NUMBERED '0'
-    WRITE A TEST FOR THIS TOO; if this goes wrong, it'll go wrong quietly and in a way that'll cause the most issues
-     further on down the line."""
-
     image = gdal.Open(image_path)
     training_tif = gdal.Open(training_tif_path)
     shape_array = gdal_array.DatasetReadAsArray(training_tif)
@@ -107,6 +101,21 @@ def get_training_data_tif(image_path, training_tif_path):
        # pdb.set_trace()
         training_data[index, :] = image_array[:, y[index], x[index]]
     return training_data, features
+
+def train_rs_simple(X_train_input, y_train_input, outModel_path, bands):
+    X_train, y_train = adjust_training_data_for_Ciaran(features= X_train_input, classes= y_train_input, bands= bands)
+    paramsDict = {'n_estimators': [300],
+                  'max_features': ['sqrt', 'log2'],
+                  'min_samples_split': list(range(2, 13, 2)),
+                  'min_samples_leaf': [5, 10, 20, 50, 100, 200, 500],
+                  'max_depth': [10, None],
+                  'bootstrap': [True, False],
+                  'criterion': ['gini', 'entropy']}
+
+    resultList = learning_model.create_model(X_train, y_train, outModel=outModel_path, clf='rf',
+                                             cores=6, params=paramsDict, scoring='accuracy')
+    print(resultList)
+    return resultList
 
 
 def adjust_training_data_for_Ciaran(features, classes,bands):
@@ -134,8 +143,8 @@ def get_training_for_cairan(image_path, shape_path,bands, attribute="CODE", shap
     features_adjusted,classes_adjusted = adjust_training_data_for_Ciaran(features, classes,bands=bands)
 
     X_train, X_test, y_train, y_test = train_test_split(features_adjusted.astype(np.uint8),
-                                                        classes_adjusted.astype(np.uint8), train_size=0.7,
-                                                        test_size=0.3)
+                                                        classes_adjusted.astype(np.uint8), train_size=0.5,
+                                                        test_size=0.5)
     return X_train,X_test,y_train,y_test
 
 def get_training_data_for_Ciaran_dir(training_image_file_paths, bands,attribute="CODE"):
@@ -181,7 +190,7 @@ def train_cairan_model(image_path,shp_path, outModel_path,bands,attribute = 'COD
     X_train,X_test,y_train,y_test = get_training_for_cairan(image_path = image_path,shape_path= shp_path,
                                                             attribute=attribute,bands=bands, shape_projection_id= shape_projection_id)
 
-   # export_training(y_train = y_train, out_dir = os.path.basename(image_path), summary_type='type')
+    export_training(y_train = y_train, out_dir = os.path.dirname(image_path), summary_type='type')
 
     # Parameters for cross-validated exhaustive grid search
     paramsDict = {'n_estimators': [300],
@@ -196,6 +205,7 @@ def train_cairan_model(image_path,shp_path, outModel_path,bands,attribute = 'COD
                                              cores=6, params=paramsDict, scoring='accuracy')
 
     model = load_model(outModel_path)
+    print('model trained.. validataion start')
 
     model.fit(X_train, y_train)
     print(model.score(X_test, y_test))
@@ -309,7 +319,8 @@ def train_model_tpot(features, classes, outmodel, generations=5, population_size
     return model, scores
 
 
-def classify_image(in_image_path, model, out_image_path,num_chunks =10):
+def classify_image(in_image_path, model_path, out_image_path,num_chunks =10):
+    model = model = joblib.load(model_path)
     print("Classifying image")
     image = gdal.Open(in_image_path)
     image_array = image.GetVirtualMemArray()

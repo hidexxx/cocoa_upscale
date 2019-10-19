@@ -18,3 +18,14 @@ import s2_functions
 
 
 
+# s1_vh_tif = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s1/s1_vh_20180402_testsite_10m.tif"
+# s1_vv_tif = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s1/s1_vv_20180402_testsite_10m.tif"
+
+#
+# s2simp_veg5_s1_bands_out = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s210m_vegIndex5_s1_obj.tif"
+#
+# s2simp_veg5_s1_bands_out = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s210m_vegIndex5_s1.tif"
+# os.system('gdal_merge.py -separate -ot Int32 -o ' + s2simp_veg5_s1_bands_out + ' '
+#            + veg_index_tif + ' ' + s2_10m_testsite_tif + ' ' + s1_vh_testsite_tif + ' ' + s1_vv_testsite_tif)
+
+

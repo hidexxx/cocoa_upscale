@@ -28,26 +28,6 @@ import pdb
 from skimage import segmentation
 
 
-
-
-# def scale_array_to_255(in_array):
-#     arr = in_array
-#     new_arr = ((arr - arr.min()) * (1 / (arr.max() - arr.min()) * 255)).astype(np.uint8)
-#     return new_arr
-#
-# def scale_to_255(intif, outtif):
-#     g, array = read_tif(intif=intif)
-#     scaled_array = np.zeros(array.shape)
-#     for n in range(array.shape[0]):
-#         arr = array[n,:,:]
-#         arr[arr<0] = 0
-#         new_arr = ((arr - arr.min()) * (1 / (arr.max() - arr.min()) * 255)).astype(np.uint8)
-#         scaled_array[n,:,:] = new_arr
-#     s2_functions.create_tif(filename=outtif,g=g,Nx=array.shape[1], Ny= array.shape[2],new_array= scaled_array,data_type=gdal.GDT_Int16,noData=0)
-#     array = None
-#     scaled_array = None
-
-
 #########################################################################
 # data pre-processing.. including preprocessing s1, s2 and segmentation
 ########################################################################

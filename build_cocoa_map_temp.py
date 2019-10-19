@@ -98,11 +98,8 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
     try:
         os.mkdir("images/merged/10m")
         os.mkdir("images/merged/20m")
-        os.mkdir("images/merged_clip/10m")
-        os.mkdir("images/merged_clip/20m")
-
         os.mkdir("images/stacked/with_indices")
-        os.mkdir("images/stacked/with_s1_seg")
+      #  os.mkdir("images/stacked/with_s1")
         os.mkdir("images/stacked/all_19bands")
         os.mkdir("segmentation")
         os.mkdir("composites")
@@ -164,15 +161,15 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
                 shutil.copy(image_path_20m, resample_path_20m)
                 ras.resample_image_in_place(resample_path_20m, 10)
 
-                index_image_path = os.path.join(td, "index_image.tif")
-                temp_pre_seg_path = os.path.join(td, "pre_seg.tif")
-                temp_seg_path = os.path.join(td,"seg.tif")
-                temp_shp_path = os.path.join(td, "outline.shp")
-                temp_clipped_seg_path = os.path.join(td,"seg_clip.tif")
-
-                # This bit's your show, Qing
-                generate_veg_index_tif(image_path_10m, resample_path_20m, index_image_path)
-                ras.stack_images([index_image_path, image_path_10m], "images/stacked/with_indices/" + image)
+                # index_image_path = os.path.join(td, "index_image.tif")
+                # temp_pre_seg_path = os.path.join(td, "pre_seg.tif")
+                # temp_seg_path = os.path.join(td,"seg.tif")
+                # temp_shp_path = os.path.join(td, "outline.shp")
+                # temp_clipped_seg_path = os.path.join(td,"seg_clip.tif")
+                #
+                # # This bit's your show, Qing
+                # generate_veg_index_tif(image_path_10m, resample_path_20m, index_image_path)
+                # ras.stack_images([index_image_path, image_path_10m], "images/stacked/with_indices/" + image)
 
                 # Now, we do Highly Experimental Image Segmentation. Please put on your goggles.
                 # SAGA, please.
@@ -189,11 +186,15 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
                 ]
                 )
 
+
+                # shape_projection = osr.SpatialReference()
+                # shape_projection.ImportFromWkt(vis_10m.GetProjection())
+                # image_gt = vis_10m.GetGeoTransform()
+                # ras.save_array_as_image(array_to_classify, temp_pre_seg_path, image_gt, shape_projection)
                 g,arr = general_functions.read_tif(intif=image_path_10m)
-                general_functions.create_tif(filename=temp_pre_seg_path,g=g,Nx=arr.shape[1],Ny=arr.shape[2],
-                                             new_array=array_to_classify,noData=0,data_type=gdal.GDT_UInt32)
-                out_segment_tif = os.path.join("segmentation", image)
-                segment_image(temp_pre_seg_path, out_segment_tif)
+                # general_functions.create_tif(filename=temp_pre_seg_path,g=g,Nx=arr.shape[1],Ny=arr.shape[2],new_array=array_to_classify,noData=0,data_type=gdal.GDT_UInt32)
+                # out_segment_tif = os.path.join("segmentation", image)
+                # segment_image(temp_pre_seg_path, out_segment_tif)
 
 
                 print('Generate brighness raster from the segments')
@@ -205,24 +206,25 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
                 out_brightness_value_ras = os.path.join("segmentation/brightness", image)
                 output_filtered_value_ras = False
 
-                ras.get_extent_as_shp(
-                    in_ras_path=temp_pre_seg_path,
-                    out_shp_path=temp_shp_path
-                )
-
-
-                general_functions.clip_rst(in_tif=out_segment_tif, outline_shp=temp_shp_path,
-                                           out_tif=temp_clipped_seg_path, keep_rst_extent=False)
-
-                cal_seg_mean(temp_pre_seg_path, temp_clipped_seg_path, out_brightness_value_ras,
-                             output_filtered_value_ras=output_filtered_value_ras)
-
-                # image_20m_6bands_array = vis_20m_array[3:,:,:]
-                # try:
-                #     os.mkdir("composites/20m/20m_6bands")
-                # except FileExistsError:
-                #     pass
+                # ras.get_extent_as_shp(
+                #     in_ras_path=temp_pre_seg_path,
+                #     out_shp_path=temp_shp_path
+                # )
                 #
+
+                # general_functions.clip_rst(in_tif=out_segment_tif, outline_shp=temp_shp_path,
+                #                            out_tif=temp_clipped_seg_path, keep_rst_extent=False)
+                #
+                # cal_seg_mean(temp_pre_seg_path, temp_clipped_seg_path, out_brightness_value_ras,
+                #              output_filtered_value_ras=output_filtered_value_ras)
+
+                image_20m_6bands_array = vis_20m_array[3:,:,:]
+                try:
+                    os.mkdir("composites/20m/20m_6bands")
+                except FileExistsError:
+                    pass
+                print(image_20m_6bands_array.shape)
+
                 # out_20m_tif_for_stack = os.path.join("composites/20m/20m_6bands", image)
                 # general_functions.create_tif(filename=out_20m_tif_for_stack,g=g,Nx=arr.shape[1],Ny=arr.shape[2],
                 #                              new_array=image_20m_6bands_array,data_type=gdal.GDT_UInt16,noData=0)
@@ -233,17 +235,16 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
     for image in os.listdir("images/stacked/with_indices"):
         if image.endswith(".tif"):
             path_to_image = os.path.join("images/stacked/with_indices", image)
-           # path_to_20m_image = os.path.join("composites/20m/20m_6bands", image)
-           # ras.stack_images([path_to_image, path_to_s1_image,path_to_20m_image,out_brightness_value_ras], os.path.join("images/stacked/all_19bands", image))
-            ras.stack_images([path_to_image, path_to_s1_image, out_brightness_value_ras],
-                             os.path.join("images/stacked/with_s1_seg", image))
+            #path_to_20m_image = os.path.join("composites/20m/20m_6bands", image)
+            #ras.stack_images([path_to_image, path_to_s1_image,path_to_20m_image,out_brightness_value_ras], os.path.join("images/stacked/all_19bands", image))
+            ras.stack_images([path_to_image, path_to_s1_image,out_brightness_value_ras], os.path.join("images/stacked/with_s1_seg_13", image))
 
     #sys.exit()
     #
     # Step 5: Classify with trained model
-    for image in os.listdir("images/stacked/with_s1_seg"):
+    for image in os.listdir("images/stacked/all_19bands/"):
         if image.endswith(".tif"):
-            path_to_image = os.path.join("images/stacked/with_s1_seg", image)
+            path_to_image = os.path.join("images/stacked/all_19bands/", image)
             path_to_out = os.path.join("output", image)
             PYEO_model.classify_image(path_to_image, path_to_model, path_to_out)
 

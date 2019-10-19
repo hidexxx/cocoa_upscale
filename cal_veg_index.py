@@ -3,6 +3,15 @@ from osgeo import gdal
 
 import general_functions
 
+import s2_functions
+def clear_nan(inarr):
+    inarr[np.isnan(inarr)] = 0
+    return inarr
+
+def clear_inf(inarr):
+    inarr[np.isinf(inarr)] = 0
+    return inarr
+
 def NDVI(s0, s2res='10m', scale=10000):
     '''
     :param s0:array read from s2 20m 9 bands data .tif, or 10m 4 bands data.tif
@@ -36,6 +45,7 @@ def CI(s0_20m, scale=10000):
     rededge1 = s0_20m[3, :, :]
     CI = (rededge3 / rededge1 - 1)
     CI[np.isnan(CI)] = 0
+    CI[np.isinf(CI)] = 0
     CI_int = CI *  scale
     return CI_int
 
@@ -53,6 +63,7 @@ def PSRI(s0_10m, s0_20m, scale=10000):
     rededge2 = s0_20m[4, :, :]
     psri = ((red - blue) / rededge2)
     psri[np.isnan(psri)] = 0
+    psri[np.isinf(psri)] = 0
     psri_int = psri * scale
     return psri_int
 
@@ -75,6 +86,7 @@ def GNDVI(s0, s2res='10m', scale=10000):
         NIR = 0
     gndvi = (NIR - green) / (NIR + green)
     gndvi[np.isnan(gndvi)] = 0
+    gndvi[np.isinf(gndvi)] = 0
     gndvi_int = gndvi * scale
     return gndvi_int
 
@@ -104,6 +116,7 @@ def IRECI(s0_10m, s0_20m):
     rededge2 = s0_20m[4, :, :]
     ireci = (NIR - red) / (rededge1 / rededge2)
     ireci[np.isnan(ireci)] = 0
+    ireci[np.isinf(ireci)] = 0
     return ireci
 
 def print_info(s0):
@@ -115,17 +128,18 @@ def print_info(s0):
 def cal_vegIndex(s0_10m, s0_20m):
     ndvi = NDVI(s0=s0_10m)
     ci = CI(s0_20m=s0_20m)
-    #psri = PSRI(s0_10m=s0_10m, s0_20m=s0_20m)
+    psri = PSRI(s0_10m=s0_10m, s0_20m=s0_20m)
     gndvi = GNDVI(s0=s0_10m)
     s2rep = S2REP(s0_10m=s0_10m, s0_20m=s0_20m)
     ireci = IRECI(s0_10m=s0_10m, s0_20m=s0_20m)
     print_info(ndvi)
     print_info(ci)
-    #print_info(psri)
+    print_info(psri)
+    print_info(gndvi)
     print_info(s2rep)
     print_info(ireci)
-   # result_array = np.dstack((ndvi, ci, psri, gndvi, s2rep, ireci)).astype(int)
-    result_array = np.dstack((ndvi, ci, gndvi, s2rep, ireci)).astype(int)
+    result_array = np.dstack((ndvi, ci, psri, gndvi, s2rep, ireci)).astype(int)
+   # result_array = np.dstack((ndvi, ci, gndvi, s2rep, ireci)).astype(int)
     return result_array
 
 def generate_veg_index_tif(tif_10m,tif_20m,out_tif):
@@ -143,6 +157,23 @@ def test_generate_veg_tif():
     out_tif = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/s2/veg_withoutPSRI.tif"
     generate_veg_index_tif(tif_10m,tif_20m,out_tif)
 
+def do_generate_veg_tif():
+    merge_10m_dir = "/media/ubuntu/Data/Ghana/cocoa_big/north_region/s2/merge_10m"
+    merge_20m_dir = "/media/ubuntu/Data/Ghana/cocoa_big/north_region/s2/merge_20m"
+    tif_10m_list = s2_functions.search_files_fulldir(input_path=merge_10m_dir,search_type='end',search_key='_clip.tif')
+    tif_20m_list = s2_functions.search_files_fulldir(input_path=merge_20m_dir,search_type='end',search_key='10m_clip.tif')
+
+
+    for n in range(len(tif_10m_list)):
+        tif_10m = tif_10m_list[n]
+        tif_20m = tif_20m_list[n]
+        print(tif_10m)
+        print(tif_20m)
+        out_tif = tif_10m[:-4] + "_vegIndex6.tif"
+        generate_veg_index_tif(tif_10m=tif_10m,tif_20m=tif_20m,out_tif=out_tif)
+
 
 if __name__ == "__main__":
-    test_generate_veg_tif()
+    print("here")
+    #test_generate_veg_tif()
+    #do_generate_veg_tif()
