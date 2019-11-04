@@ -10,6 +10,8 @@ from pyeo import filesystem_utilities as fs
 import s2_functions
 import general_functions
 import numpy as np
+import matplotlib.pyplot as plt
+import pylab
 
 # # 2. s2
 # # 2.1 download and preprocess :output 20m merge. tif (10 bands)
@@ -18,13 +20,21 @@ sen2cor_path = "/home/ubuntu/Downloads/Sen2Cor-02.08.00-Linux64/bin/L2A_Process"
 aoi_path = "/media/ubuntu/Data/Ghana/cocoa_big/shp/cocoa_big_simp.geojson"
 conf = "/media/ubuntu/Data/Ghana/cocoa_big/s2/cocoa_big.ini"
 
-l1_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/L1"
-l2_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/L2"
-merge_10m_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/merge_10m"
-merge_20m_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/merge_20m"
+# l1_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/L1"
+# l2_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/L2"
+# merge_10m_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/merge_10m"
+# merge_20m_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/merge_20m"
+#
+# merge_10m_clip_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/images/merged_clip2/10m"
+# merge_20m_clip_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/images/merged_clip2/20m"
 
-merge_10m_clip_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/images/merged_clip2/10m"
-merge_20m_clip_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2/images/merged_clip2/20m"
+# composite_10m_dir = "/media/ubuntu/Data/Ghana/north_region/s2/composites/10m"
+# composite_20m_dir = "/media/ubuntu/Data/Ghana/north_region/s2/composites/20m"
+
+l1_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2_batch2/images/L1"
+l2_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2_batch2/images/L2"
+merge_10m_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2_batch2/images/merged/10m"
+merge_20m_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2_batch2/images/merged/20m"
 
 composite_10m_dir = "/media/ubuntu/Data/Ghana/north_region/s2/composites/10m"
 composite_20m_dir = "/media/ubuntu/Data/Ghana/north_region/s2/composites/20m"
@@ -63,25 +73,12 @@ def test_sort_into_tile():
     sort_into_tile(indir= "/media/ubuntu/Data/Ghana/cocoa_big/s2/merge_test")
 
 def do_sort_into_tile():
-    #sort_into_tile(indir = merge_10m_dir)
+    sort_into_tile(indir = merge_10m_dir)
     sort_into_tile(indir = merge_20m_dir)
 
 
 def build_cloud_free_compoiste(indir, composite_out_dir):
     ras.composite_directory(image_dir=indir, composite_out_dir=composite_out_dir, format="GTiff", generate_date_images=False)
-
-def do_cloud_free_composite():
-  #  build_cloud_free_compoiste(indir="/media/ubuntu/Data/Ghana/cocoa_big/north_region/s2/merge_10m/T30NWM",composite_out_dir=composite_dir)
-  indir = "/media/ubuntu/Data/Ghana/msk"
-  outdir = "/media/ubuntu/Data/Ghana/cocoa_big/north_region/s2/merge_20m/T30NWM"
-  msk_list = s2_functions.search_files_fulldir(input_path=indir,search_key='.msk',search_type='end')
-  for msk in msk_list:
-      os.system('gdalwarp -overwrite -tr 20 20 ' + msk + ' ' + os.path.join(outdir,os.path.basename(msk)))
-  build_cloud_free_compoiste(indir="/media/ubuntu/Data/Ghana/cocoa_big/north_region/s2/merge_20m/T30NWM",
-                               composite_out_dir=composite_dir)
-
-  build_cloud_free_compoiste(indir=merge_20m_dir,composite_out_dir=composite_dir)
-
 
 def clip_to_shp(intif, inshp, outtif):
     os.system('gdalwarp -cutline ' + inshp + ' -srcnodata 0 -dstnodata 0 -overwrite ' + intif + ' ' + outtif)
@@ -167,21 +164,20 @@ def move_merge():
             shutil.move(from_path, to_path)
 
 
-
 def cloud_free_composite_dir():
-    working_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2"
+    working_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2_batch2"
     os.chdir(working_dir)
 
     merge_10m_dir = "images/merged/10m"
     merge_20m_dir = "images/merged/20m"
 
-    for tile in os.listdir(merge_10m_clip_dir):
+    for tile in os.listdir(merge_10m_dir):
         tile_path = os.path.join(merge_10m_dir, tile)
         this_composite_path = ras.composite_directory(tile_path, "composites/10m")
         new_composite_path = "{}_{}.tif".format(this_composite_path.rsplit('.')[0], tile)
         os.rename(this_composite_path, new_composite_path)
 
-    for tile in os.listdir(merge_20m_clip_dir):
+    for tile in os.listdir(merge_20m_dir):
         tile_path = os.path.join(merge_20m_dir, tile)
         this_composite_path = ras.composite_directory(tile_path, "composites/20m")
         new_composite_path = "{}_{}.tif".format(this_composite_path.rsplit('.')[0], tile)
@@ -228,14 +224,12 @@ def do_clip():
     for compsite in composite_list:
         clip_to_shp(intif=compsite, inshp=inshp, outtif=compsite[:-4] + '_clip.tif')
 
-
 def do_rst_to_10m():
     indir = merge_20m_dir
     composite_20m_list = s2_functions.search_files_fulldir(input_path=indir, search_key='composite',
                                                            search_type='start')
     for composite_20m in composite_20m_list:
         rst_to_10m(composite_20m, outtif=composite_20m[:-4] + '_10m.tif')
-
 
 def generate_20m_6bands(in_20m_tif):
     g,arr = general_functions.read_tif(in_20m_tif)
@@ -271,27 +265,127 @@ def stack_for_testsite_13bands():
 
     #ras.stack_images([veg_index, s2_10m, s1_vh,s1_vv,s2_20m,seg], out_stack)
 
-
-
-def do_scale():
+def do_scale_to255():
     input_tif = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/all_19bands_stack.tif"
     output_tif = input_tif[:-4] + "_scaled_255.tif"
    # general_functions.scale_tif(in_tif=input_tif,out_tif=output_tif,type = "robust")
     general_functions.scale_layer_to_255(intif=input_tif,outtif=output_tif)
 
+def plot_hist_all(in_tif):
+    g = gdal.Open(in_tif)
+    a = g.GetVirtualMemArray()
+
+    for band in range(a.shape[0]):
+        print('plotting....' + str(band))
+        value_array = a[band,:,:]
+
+        mask = value_array ==0
+        #        mask = bm_array<=0
+        #    mask = bm_array< -10
+        value_ma = value_array[mask == False]
+
+        edg = np.arange(np.nanmin(value_ma), np.nanmax(value_ma), 10)
+        # h = np.zeros(len(edg)-1)
+
+        hist, j = np.histogram(value_ma, edg, density=True)
+        plt.plot(edg[:-1], hist, label='band : ' +str(band))
+        # plt.title( 'histgram of bm generated from different models')
+        plt.ylabel('Density')
+        plt.xlabel('Band Value')
+        plt.xlim(-20, 10000)
+        # plt.ylim(0,30000)
+        # plt.ylim(0,300000)
+        plt.legend(frameon=False)
+    plt.show()
+
+
+def plot_hist(in_tif):
+    g = gdal.Open(in_tif)
+    a = g.GetVirtualMemArray()
+    #fig = pylab.gcf()
+    for band in range(a.shape[0]):
+        print('plotting......' + os.path.basename(in_tif))
+        print('band : ' + str(band))
+        value_array = a[band,:,:]
+
+        mask = value_array ==0
+        #        mask = bm_array<=0
+        #    mask = bm_array< -10
+        value_ma = value_array[mask == False]
+
+        edg = np.arange(np.nanmin(value_ma), np.nanmax(value_ma), 10)
+        # h = np.zeros(len(edg)-1)
+        hist, j = np.histogram(value_ma, edg, density=True)
+
+        plt.figure(1,figsize=(12,12))
+
+        ax1 = pylab.subplot(a.shape[0],2,band+1)
+
+        ax1.plot(edg[:-1], hist, label='band : ' +str(band))
+        # plt.title( 'histgram of bm generated from different models')
+       # ax1.ylabel('Density')
+       # ax1.xlabel('Band Value')
+        #ax1.xlim(-20, 10000)
+        #plt.ylim(0,30000)
+        ax1.legend(frameon=False)
+    pylab.subplots_adjust(hspace=0, bottom=None, top=None)
+    pylab.show()
+    #plt.show()
+    pylab.savefig(in_tif[:-4]+'_hist.png')
+
+
+def do_scale(ref_image, tobe_scaled_image,out_scaled_image, type = 'linear'):
+    if type == 'linear' or type == None:
+        print("here")
+
+    elif type == '255':
+        general_functions.scale_array_to_255(intif=tobe_scaled_image,outtif=out_scaled_image)
+
+def generate_seg_rst():
+    '''
+    :param s0:array read from s2 20m 9 bands data .tif or 10m 4 bands data.tif
+    for s2 20m, the band sequence are: band 2, 3, 4, 5, 6, 7, 8a, 11, 12
+    for s2 10m, the band sequence are: band 2, 3, 4, 8
+    :return:
+    '''
+    merge_10m_dir = "/media/ubuntu/Data/Ghana/north_region/s2/composites/10m/"
+    merge_20m_dir = "/media/ubuntu/Data/Ghana/north_region/s2/composites/20m/"
+    tif_10m_list = s2_functions.search_files_fulldir(input_path=merge_10m_dir,search_type='end',search_key='NWM.tif')
+    tif_20m_list = s2_functions.search_files_fulldir(input_path=merge_20m_dir,search_type='end',search_key='NWM.tif')
+
+    for n in range(len(tif_10m_list)):
+        tif_10m = tif_10m_list[n]
+        tif_20m = tif_20m_list[n]
+        print(tif_10m)
+        print(tif_20m)
+        out_tif = tif_10m[:-4] + "_NIR_SWIR_red.tif"
+
+        g_10m, a_10m = general_functions.read_tif(tif_10m)
+        a_10m_trans = np.transpose(a_10m, (1,2,0))
+
+        g_20m, a_20m = general_functions.read_tif(tif_20m)
+        a_20m_trans = np.transpose(a_20m, (1,2,0))
+
+        a_3band = np.zeros((a_10m_trans.shape[0],a_10m_trans.shape[1],3), dtype= int)
+
+    # # # version 3: NIR, SWIR, and red
+        a_3band[:,:,0] = a_10m_trans[:,:,3]
+        a_3band[:,:,1] = a_20m_trans[:,:,7]
+        a_3band[:,:,2] = a_10m_trans[:,:,2]
+
+        a_3band_trans = np.transpose(a_3band, (2,0,1))
+        a_3band_out = tif_10m[:-4] + '_NIR_SWIR_red.tif'
+
+        general_functions.create_tif(filename=a_3band_out, g = g_20m, Nx= a_20m.shape[1], Ny= a_20m.shape[2],new_array=a_3band_trans, noData= 0,data_type=gdal.GDT_UInt16)
+
 
 if __name__ == "__main__":
     fs.init_log("ghana_s2.log")
+    generate_seg_rst()
     #do_preproc_only()
     #do_sort_into_tile()
-    #do_cloud_free_composite()
-    #do_rst_to_10m()
-    #do_clip()
-    #general_functions.create_seg_tif(working_dir="/media/ubuntu/Data/Ghana/north_region/s2/",search_suffix='.tif')
-    # general_functions.create_stack_image(working_dir="/media/ubuntu/Data/Ghana/north_region/s2/",
-    #                                      path_to_s1_image="/media/ubuntu/Data/Ghana/north_region/s1/s1_mosaic_clip.tif")
-    # general_functions.create_stack_image(working_dir="/media/ubuntu/Data/Ghana/cocoa_upscale_test/s2/",
-    #                                      path_to_s1_image="/media/ubuntu/Data/Ghana/north_region/s1/s1_mosaic_clip.tif")
+    #cloud_free_composite_dir()
+
     #generate_20m_6bands(in_20m_tif = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/s2/s2_20180219_testsite_20m_resample.tif")
     #stack_for_testsite()
  #   stack_for_testsite_13bands()
@@ -299,8 +393,9 @@ if __name__ == "__main__":
    # clip_to_outline()
     #clip_dir()
     #clip_north_region_dir()
-    cloud_free_composite_dir()
-    #move_merge()
+    #
+    #plot_hist(in_tif= "/media/ubuntu/Data/Ghana/cocoa_upscale_test/all_13bands_stack.tif")
+    #plot_hist(in_tif="/media/ubuntu/Data/Ghana/north_region/s2_NWN/images/stacked/with_s1_seg/composite_20180122T102321_T30NWN.tif")
 
 
 

@@ -86,6 +86,15 @@ def segment_image(in_path, out_path, seeds_band_width = 5, cores = 1, shape_dir=
 
         gdal.Rasterize(out_path, temp_shape_path, options=ras_params)
 
+
+def make_directory(indirectory):
+    try:
+        os.mkdir(indirectory)
+    except FileExistsError:
+        pass
+
+
+
 def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_image, path_to_config,
                     epsg_for_map, path_to_model,
                     cloud_cover=20, log_path="build_cocoa_map.log", use_sen2cor=False,

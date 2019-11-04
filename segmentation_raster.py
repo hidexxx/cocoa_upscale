@@ -6,6 +6,7 @@ import os
 import pdb
 import scipy.ndimage.measurements
 import pyeo.classification as cls
+import pyeo.raster_manipulation as ras
 
 
 def cal_seg_mean(in_value_ras, seg_ras, out_value_ras, output_filtered_value_ras = True):
@@ -72,10 +73,34 @@ def test_classify():
             classify_out = os.path.join(out_dir,image + '_obj_classified.tif')
             cls.classify_image(image_path=os.path.join(image_dir,image),model_path=model_path, class_out_path=classify_out)
 
+def do_NWM():
+    pre_seg_tif = "/media/ubuntu/Data/Ghana/north_region/s2/composites/composite_20180306T103021_T30NWM_NIR_SWIR_red.tif"
+    seg_raster = "/media/ubuntu/Data/Ghana/north_region/s2/segmentation/composite_20180306T103021_T30NWM.tif"
+    out_brightness = "/media/ubuntu/Data/Ghana/north_region/s2/segmentation/brightness/composite_20180306T103021_T30NWM.tif"
+
+    seg_raster_clipped = seg_raster[:-4] + '_clip.tif'
+    temp_shp_path = pre_seg_tif[:-4] + '.shp'
+    ras.get_extent_as_shp(
+        in_ras_path=pre_seg_tif,
+        out_shp_path=temp_shp_path
+    )
+
+    general_functions.clip_rst(in_tif=seg_raster, outline_shp=temp_shp_path,
+                               out_tif=seg_raster_clipped, keep_rst_extent=False)
+
+    cal_seg_mean(in_value_ras = pre_seg_tif,
+                 seg_ras = seg_raster_clipped ,
+                 out_value_ras = out_brightness,
+                 output_filtered_value_ras=False)
+
+
+
 if __name__ == "__main__":
     #test_cal_seg_mean()
     #test_classify()
-    test_generate_brightness_rst()
+    #test_generate_brightness_rst()
+    #do_NWM()
+    print("here")
 
 #
 #

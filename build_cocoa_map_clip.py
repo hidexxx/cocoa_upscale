@@ -88,12 +88,11 @@ def segment_image(in_path, out_path, seeds_band_width = 5, cores = 1, shape_dir=
 
         gdal.Rasterize(out_path, temp_shape_path, options=ras_params)
 
-def make_directory(indirectory):
+def make_directory(in_directory):
     try:
-        os.mkdir(indirectory)
+        os.mkdir(in_directory)
     except FileExistsError:
         pass
-
 
 
 def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_image, path_to_config,
@@ -105,22 +104,21 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
     fu.init_log(log_path)
     os.chdir(working_dir)
     fu.create_file_structure(os.getcwd())
-    try:
-        os.mkdir("images/merged/10m")
-        os.mkdir("images/merged/20m")
-      #  os.mkdir("images/merged_clip/10m")
-      #  os.mkdir("images/merged_clip/20m")
 
-        os.mkdir("images/stacked/with_indices")
-        os.mkdir("images/stacked/with_s1_seg")
-        os.mkdir("images/stacked/all_19bands")
-        os.mkdir("segmentation")
-        os.mkdir("composites")
-        os.mkdir("composites/10m")
-        os.mkdir("composites/20m")
-      #  os.mkdir("composites/20m/20m_6bands_resample")
-    except FileExistsError:
-        pass
+    make_directory("images/merged/10m")
+    make_directory("images/merged/20m")
+
+    make_directory("images/stacked/with_indices")
+    make_directory("images/stacked/with_s1_seg")
+    make_directory("images/stacked/all_19bands")
+
+    make_directory("segmentation")
+    make_directory("composites")
+    make_directory("composites/10m")
+    make_directory("composites/20m")
+
+    make_directory("composites/10m_full")
+    make_directory("composites/20m_full")
 
 
     # Step 1: Download S2 3imagery for the timescale
@@ -165,67 +163,100 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
             os.rename(this_composite_path, new_composite_path)
 
     # Step 3: Generate the bands. Time for the New Bit.
-    with TemporaryDirectory() as td:
+    clip_to_aoi = False
+    if clip_to_aoi:
+        for image in os.listdir("composites/10m_full"):
+            if image.endswith(".tif"):
+                image_path_10m_full = os.path.join("composites/10m_full", image)
+                image_path_20m_full = os.path.join("composites/20m_full", image)
+
+                image_path_10m_clipped = os.path.join("composites/10m", image)
+                image_path_20m_clipped = os.path.join("composites/20m", image)
+
+                # config = configparser.ConfigParser()
+                # conf = config.read(path_to_config)
+                # print(conf)
+                # aoi = config['cocoa_mapping']['path_to_aoi']
+
+                aoi = "/media/ubuntu/Data/Ghana/cocoa_big/shp/cocoa_big.shp"
+
+                ras.clip_raster(raster_path=image_path_10m_full, aoi_path=aoi,
+                                out_path=image_path_10m_clipped,srs_id = 32630)
+                ras.clip_raster(raster_path=image_path_20m_full, aoi_path=aoi,
+                                out_path=image_path_20m_clipped, srs_id=32630)
+
+
+    do_segmentation = True
+    if do_segmentation == True:
         for image in os.listdir("composites/10m"):
             if image.endswith(".tif"):
-                image_path_10m = os.path.join("composites/10m", image)
-                image_path_20m = os.path.join("composites/20m", image)
-                resample_path_20m = os.path.join(td, image)  # You'll probably regret this later, roberts.
-                shutil.copy(image_path_20m, resample_path_20m)
-                ras.resample_image_in_place(resample_path_20m, 10)
+                with TemporaryDirectory() as td:
+                    image_path_10m = os.path.join("composites/10m", image)
+                    image_path_20m = os.path.join("composites/20m", image)
+                    resample_path_20m_v1 = os.path.join(td, image)  # You'll probably regret this later, roberts.
+                    shutil.copy(image_path_20m, resample_path_20m_v1)
+                    ras.resample_image_in_place(resample_path_20m_v1, 10)
 
-                index_image_path = os.path.join(td, "index_image.tif")
-                temp_pre_seg_path = os.path.join(td, "pre_seg.tif")
-                temp_seg_path = os.path.join(td,"seg.tif")
-                temp_shp_path = os.path.join(td, "outline.shp")
-                temp_clipped_seg_path = os.path.join(td,"seg_clip.tif")
+                    index_image_path = os.path.join(td, "index_image.tif")
+                    temp_pre_seg_path = os.path.join(td, "pre_seg.tif")
+                    temp_seg_path = os.path.join(td,"seg.tif")
+                    temp_shp_path = os.path.join(td, "outline.shp")
+                    temp_clipped_seg_path = os.path.join(td,"seg_clip.tif")
 
-                # This bit's your show, Qing
-                generate_veg_index_tif(image_path_10m, resample_path_20m, index_image_path)
-                ras.stack_images([index_image_path, image_path_10m], "images/stacked/with_indices/" + image)
+                    # This bit's your show, Qing
+                    temp_s1_outline_path = os.path.join(td, "s1_outline.shp")
+                    ras.get_extent_as_shp(
+                        in_ras_path=image_path_10m,
+                        out_shp_path=temp_s1_outline_path
+                    )
 
-                # Now, we do Highly Experimental Image Segmentation. Please put on your goggles.
-                # SAGA, please.
-                # Meatball science time
-                vis_10m = gdal.Open(image_path_10m)
-                vis_20m_resampled = gdal.Open(resample_path_20m)
-                vis_10m_array = vis_10m.GetVirtualMemArray()
-                vis_20m_array = vis_20m_resampled.GetVirtualMemArray()
-                # NIR, SWIR, red
-                array_to_classify = np.stack([
-                    vis_10m_array[3,...],
-                    vis_20m_array[7,...],
-                    vis_10m_array[2,...]
-                ]
-                )
-
-                g,arr = general_functions.read_tif(intif=image_path_10m)
-                general_functions.create_tif(filename=temp_pre_seg_path,g=g,Nx=arr.shape[1],Ny=arr.shape[2],
-                                             new_array=array_to_classify,noData=0,data_type=gdal.GDT_UInt32)
-                out_segment_tif = os.path.join("segmentation", image)
-                segment_image(temp_pre_seg_path, out_segment_tif)
+                    resample_path_20m = os.path.join(td, image[:-4]+'_to_10moutline.tif')
+                    general_functions.clip_rst(in_tif=resample_path_20m_v1, outline_shp=temp_s1_outline_path,
+                                               out_tif=resample_path_20m, keep_rst_extent=False)
 
 
-                print('Generate brighness raster from the segments')
-                try:
-                    os.mkdir("segmentation/brightness")
-                except FileExistsError:
-                    pass
+                   # generate_veg_index_tif(image_path_10m, resample_path_20m, index_image_path)
+                   # ras.stack_images([index_image_path, image_path_10m], "images/stacked/with_indices/" + image)
 
-                out_brightness_value_ras = os.path.join("segmentation/brightness", image)
-                output_filtered_value_ras = False
+                    # Now, we do Highly Experimental Image Segmentation. Please put on your goggles.
+                    # SAGA, please.
+                    # Meatball science time
+                    vis_10m = gdal.Open(image_path_10m)
+                    vis_20m_resampled = gdal.Open(resample_path_20m)
+                    vis_10m_array = vis_10m.GetVirtualMemArray()
+                    vis_20m_array = vis_20m_resampled.GetVirtualMemArray()
+                    # NIR, SWIR, red
+                    array_to_classify = np.stack([
+                        vis_10m_array[3,...],
+                        vis_20m_array[7,...],
+                        vis_10m_array[2,...]
+                    ]
+                    )
 
-                ras.get_extent_as_shp(
-                    in_ras_path=temp_pre_seg_path,
-                    out_shp_path=temp_shp_path
-                )
+                    g,arr = general_functions.read_tif(intif=image_path_10m)
+                    general_functions.create_tif(filename=temp_pre_seg_path,g=g,Nx=arr.shape[1],Ny=arr.shape[2],
+                                                 new_array=array_to_classify,noData=0,data_type=gdal.GDT_UInt32)
+                    out_segment_tif = os.path.join("segmentation", image)
+                  #  segment_image(temp_pre_seg_path, out_segment_tif)
 
 
-                general_functions.clip_rst(in_tif=out_segment_tif, outline_shp=temp_shp_path,
-                                           out_tif=temp_clipped_seg_path, keep_rst_extent=False)
+                    print('Generate brighness raster from the segments')
+                    make_directory("segmentation/brightness")
 
-                cal_seg_mean(temp_pre_seg_path, temp_clipped_seg_path, out_brightness_value_ras,
-                             output_filtered_value_ras=output_filtered_value_ras)
+                    out_brightness_value_ras = os.path.join("segmentation/brightness", image)
+                    output_filtered_value_ras = False
+
+                    ras.get_extent_as_shp(
+                        in_ras_path=temp_pre_seg_path,
+                        out_shp_path=temp_shp_path
+                    )
+
+
+                    general_functions.clip_rst(in_tif=out_segment_tif, outline_shp=temp_shp_path,
+                                               out_tif=temp_clipped_seg_path, keep_rst_extent=False)
+
+                    cal_seg_mean(temp_pre_seg_path, temp_clipped_seg_path, out_brightness_value_ras,
+                                 output_filtered_value_ras=output_filtered_value_ras)
 
                 # image_20m_6bands_array = vis_20m_array[3:,:,:]
                 # try:
@@ -238,15 +269,17 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
                 #                              new_array=image_20m_6bands_array,data_type=gdal.GDT_UInt16,noData=0)
 
 
-
+    do_stack = True
+    if do_stack == True:
     # Step 4: Stack the new bands with the S1, seg, and 6 band 20m rasters
-    for image in os.listdir("images/stacked/with_indices"):
-        if image.endswith(".tif"):
-            path_to_image = os.path.join("images/stacked/with_indices", image)
-           # path_to_20m_image = os.path.join("composites/20m/20m_6bands", image)
-           # ras.stack_images([path_to_image, path_to_s1_image,path_to_20m_image,out_brightness_value_ras], os.path.join("images/stacked/all_19bands", image))
-            ras.stack_images([path_to_image, path_to_s1_image, out_brightness_value_ras],
-                             os.path.join("images/stacked/with_s1_seg", image))
+        for image in os.listdir("images/stacked/with_indices"):
+            if image.endswith(".tif"):
+                path_to_image = os.path.join("images/stacked/with_indices", image)
+                path_to_brightness_image = os.path.join("segmentation/brightness", image)
+               # path_to_20m_image = os.path.join("composites/20m/20m_6bands", image)
+               # ras.stack_images([path_to_image, path_to_s1_image,path_to_20m_image,out_brightness_value_ras], os.path.join("images/stacked/all_19bands", image))
+                ras.stack_images([path_to_image, path_to_s1_image, path_to_brightness_image],
+                                 os.path.join("images/stacked/with_s1_seg", image))
 
     #sys.exit()
     #
