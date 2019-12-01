@@ -2,7 +2,7 @@ from sklearn.model_selection import train_test_split, StratifiedShuffleSplit, Gr
 from sklearn.svm import SVC
 
 import PYEO_model
-
+from sklearn import preprocessing
 import general_functions
 import pandas as pd
 import numpy as np
@@ -95,10 +95,6 @@ def do_gridSearch(training_shp, training_image, model_out_path, bands ):
     PYEO_model.train_cairan_model(image_path = training_image,shp_path=training_shp, outModel_path = model_out_path,
                                   bands =bands ,attribute = 'Id', shape_projection_id = 32630)
 
-def do_classify_image(model_path,in_image_path,out_image_path):
-
-    PYEO_model.classify_image(in_image_path=in_image_path,out_image_path=out_image_path,model=model_path)
-
 def test_do_grid_search():
     training_shp = "/media/ubuntu/storage/Ghana/cocoa_upscale_test/shp/field_data_clip.shp"
     training_image = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/all_19bands_stack.tif"
@@ -112,7 +108,7 @@ def test_do_classify_image():
     out_image_path = image_to_classify[:-4] + '_classified_v2.tif'
     model_path = image_to_classify[:-4] + '.pkl'
 
-    do_classify_image(model_path=model_path,in_image_path=image_to_classify,out_image_path=out_image_path)
+    PYEO_model.classify_image(model_path=model_path,in_image_path=image_to_classify,out_image_path=out_image_path)
 
 
 def train_RS():
@@ -124,28 +120,44 @@ def train_RS():
     #                "s2_r", "s2_nir", "hv", "vv","s2_20m_1","s2_20m_2","s2_20m_3","s2_20m_4","s2_20m_5","s2_20m_6","seg"]
     #bands = 19
 
-    training_tif = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/all_13bands_stack.tif"
-    outmodel = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/george_data_13bands_add.pkl"
-    training_summary = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/george_data_13bands_add.csv"
+    training_tif = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/all_13bands_stack_v2.tif"
+    outmodel = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/george_data_13bands_add_255_eRF_v2.pkl"
+    training_summary = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/george_data_13bands_add_255_v2.csv"
     band_labels = ["ndvi", "ci", "psri", "gndvi", "s2_rep", "ireci", "s2_b", "s2_g",
                    "s2_r", "s2_nir", "hv", "vv","seg"]
     bands = 13
 
     features, labels = PYEO_model.get_training_data_tif(image_path=training_tif,training_tif_path=george_points_tif)
 
-
     features_df = pd.DataFrame(data= features,columns= band_labels).astype(np.int32)
+
+    scale = preprocessing.MinMaxScaler(feature_range=(0,255)).fit(features)
+    features_trans =  scale.transform(features)
+    features_trans_df = pd.DataFrame(features_trans, index=features_df.index, columns=features_df.columns)
+
+    features_df.describe()
+    features_trans_df.describe()
+
     labels_df = pd.DataFrame(data= labels, columns= ['class_name']).astype(np.int)
 
     features_df["class_name"] = labels_df["class_name"]
 
     features_df.describe().to_csv(training_summary)
 
-    PYEO_model.train_rs_simple(X_train_input=features,y_train_input=labels,outModel_path=outmodel, bands = bands)
+    #PYEO_model.train_rs_simple(X_train_input=features_trans,y_train_input=labels,outModel_path=outmodel, bands = bands)
+    PYEO_model.train_eRF_gs_simple(X_train_input=features_trans, y_train_input=labels, outModel_path=outmodel, bands=bands)
+    image_tobe_classified = training_tif
 
-    do_classify_image(model_path=outmodel,
-                      in_image_path=training_tif,
-                      out_image_path=training_tif[:-4] +"_classified_13bands.tif")
+    PYEO_model.classify_image(model_path=outmodel,
+                      in_image_path= image_tobe_classified,
+                      out_image_path=image_tobe_classified[:-4] +"_classified_13bands_255_eRF2_v2.tif",
+                      rescale_predict_image = scale)
+    image_tobe_classified = "/media/ubuntu/Data/Ghana/north_region/s2_NWN/images/stacked/with_s1_seg/composite_20180122T102321_T30NWN.tif"
+
+    PYEO_model.classify_image(model_path=outmodel,
+                              in_image_path=image_tobe_classified,
+                              out_image_path=image_tobe_classified[:-4] + "_classified_13bands_255_eRF2_v2.tif",
+                              rescale_predict_image=scale)
 
 
 
@@ -156,9 +168,6 @@ if __name__ == "__main__":
     #test_do_classify_image()
   # train_SVM(csv = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/Training_points_clip_dropTransition_point_clean2.csv")
    train_RS()
-   # do_classify_image(model_path="/media/ubuntu/Data/Ghana/cocoa_upscale_test/george_data_19bands_add.pkl",
-   #                   in_image_path="/media/ubuntu/Data/Ghana/cocoa_upscale_test/all_19bands_stack.tif",
-   #                   out_image_path="/media/ubuntu/Data/Ghana/cocoa_upscale_test/all_19bands_stack_classified_v4.tif")
 
 
 

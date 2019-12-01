@@ -21,6 +21,7 @@ from tpot.builtins import StackingEstimator
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.externals import joblib
+from sklearn.impute import SimpleImputer
 
 def create_matching_dataset(in_dataset, out_path,
                             format="GTiff", bands=1, datatype=None):
@@ -113,6 +114,21 @@ def train_rs_simple(X_train_input, y_train_input, outModel_path, bands):
                   'criterion': ['gini', 'entropy']}
 
     resultList = learning_model.create_model(X_train, y_train, outModel=outModel_path, clf='rf',
+                                             cores=6, params=paramsDict, scoring='accuracy')
+    print(resultList)
+    return resultList
+
+def train_eRF_gs_simple(X_train_input, y_train_input, outModel_path, bands):
+    X_train, y_train = adjust_training_data_for_Ciaran(features= X_train_input, classes= y_train_input, bands= bands)
+    paramsDict = {'n_estimators': [300],
+                  'max_features': ['sqrt', 'log2'],
+                  'min_samples_split': list(range(2, 13, 2)),
+                  'min_samples_leaf': [5, 10, 20, 50, 100, 200, 500],
+                  'max_depth': [10, None],
+                  'bootstrap': [True, False],
+                  'criterion': ['gini', 'entropy']}
+
+    resultList = learning_model.create_model(X_train, y_train, outModel=outModel_path, clf='erf',
                                              cores=6, params=paramsDict, scoring='accuracy')
     print(resultList)
     return resultList
@@ -319,16 +335,27 @@ def train_model_tpot(features, classes, outmodel, generations=5, population_size
     return model, scores
 
 
-def classify_image(in_image_path, model_path, out_image_path,num_chunks =10):
-    model = model = joblib.load(model_path)
+def classify_image(in_image_path, model_path, out_image_path,num_chunks =10, rescale_predict_image = None):
+    model = joblib.load(model_path)
     print("Classifying image")
     image = gdal.Open(in_image_path)
     image_array = image.GetVirtualMemArray()
     features_to_classify = reshape_raster_for_ml(image_array)
     width = image.RasterXSize
     height = image.RasterYSize
+
+    imp = SimpleImputer(missing_values= 0, strategy='mean')
+    imp = imp.fit(features_to_classify)
+
+    features_to_classify_filtered = imp.transform(features_to_classify)
+
+    if rescale_predict_image is not None:
+        features_to_classify_norm = rescale_predict_image.transform(features_to_classify_filtered)
+    else:
+        features_to_classify_norm = features_to_classify_filtered
+
     out_chunks = []
-    for i, chunk in enumerate(np.array_split(features_to_classify, num_chunks)):
+    for i, chunk in enumerate(np.array_split(features_to_classify_norm, num_chunks)):
         print("Classifying {0}".format(i))
         chunk_copy = np.copy(chunk)
         chunk_copy = np.where(np.isfinite(chunk_copy), chunk_copy,0)  # this is a slower line

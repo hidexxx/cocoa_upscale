@@ -10,8 +10,7 @@ from pyeo import filesystem_utilities as fs
 import s2_functions
 import general_functions
 import numpy as np
-import matplotlib.pyplot as plt
-import pylab
+
 
 # # 2. s2
 # # 2.1 download and preprocess :output 20m merge. tif (10 bands)
@@ -265,82 +264,6 @@ def stack_for_testsite_13bands():
 
     #ras.stack_images([veg_index, s2_10m, s1_vh,s1_vv,s2_20m,seg], out_stack)
 
-def do_scale_to255():
-    input_tif = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/all_19bands_stack.tif"
-    output_tif = input_tif[:-4] + "_scaled_255.tif"
-   # general_functions.scale_tif(in_tif=input_tif,out_tif=output_tif,type = "robust")
-    general_functions.scale_layer_to_255(intif=input_tif,outtif=output_tif)
-
-def plot_hist_all(in_tif):
-    g = gdal.Open(in_tif)
-    a = g.GetVirtualMemArray()
-
-    for band in range(a.shape[0]):
-        print('plotting....' + str(band))
-        value_array = a[band,:,:]
-
-        mask = value_array ==0
-        #        mask = bm_array<=0
-        #    mask = bm_array< -10
-        value_ma = value_array[mask == False]
-
-        edg = np.arange(np.nanmin(value_ma), np.nanmax(value_ma), 10)
-        # h = np.zeros(len(edg)-1)
-
-        hist, j = np.histogram(value_ma, edg, density=True)
-        plt.plot(edg[:-1], hist, label='band : ' +str(band))
-        # plt.title( 'histgram of bm generated from different models')
-        plt.ylabel('Density')
-        plt.xlabel('Band Value')
-        plt.xlim(-20, 10000)
-        # plt.ylim(0,30000)
-        # plt.ylim(0,300000)
-        plt.legend(frameon=False)
-    plt.show()
-
-
-def plot_hist(in_tif):
-    g = gdal.Open(in_tif)
-    a = g.GetVirtualMemArray()
-    #fig = pylab.gcf()
-    for band in range(a.shape[0]):
-        print('plotting......' + os.path.basename(in_tif))
-        print('band : ' + str(band))
-        value_array = a[band,:,:]
-
-        mask = value_array ==0
-        #        mask = bm_array<=0
-        #    mask = bm_array< -10
-        value_ma = value_array[mask == False]
-
-        edg = np.arange(np.nanmin(value_ma), np.nanmax(value_ma), 10)
-        # h = np.zeros(len(edg)-1)
-        hist, j = np.histogram(value_ma, edg, density=True)
-
-        plt.figure(1,figsize=(12,12))
-
-        ax1 = pylab.subplot(a.shape[0],2,band+1)
-
-        ax1.plot(edg[:-1], hist, label='band : ' +str(band))
-        # plt.title( 'histgram of bm generated from different models')
-       # ax1.ylabel('Density')
-       # ax1.xlabel('Band Value')
-        #ax1.xlim(-20, 10000)
-        #plt.ylim(0,30000)
-        ax1.legend(frameon=False)
-    pylab.subplots_adjust(hspace=0, bottom=None, top=None)
-    pylab.show()
-    #plt.show()
-    pylab.savefig(in_tif[:-4]+'_hist.png')
-
-
-def do_scale(ref_image, tobe_scaled_image,out_scaled_image, type = 'linear'):
-    if type == 'linear' or type == None:
-        print("here")
-
-    elif type == '255':
-        general_functions.scale_array_to_255(intif=tobe_scaled_image,outtif=out_scaled_image)
-
 def generate_seg_rst():
     '''
     :param s0:array read from s2 20m 9 bands data .tif or 10m 4 bands data.tif
@@ -377,6 +300,12 @@ def generate_seg_rst():
         a_3band_out = tif_10m[:-4] + '_NIR_SWIR_red.tif'
 
         general_functions.create_tif(filename=a_3band_out, g = g_20m, Nx= a_20m.shape[1], Ny= a_20m.shape[2],new_array=a_3band_trans, noData= 0,data_type=gdal.GDT_UInt16)
+
+def do_scale_to255():
+    input_tif = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/all_19bands_stack.tif"
+    output_tif = input_tif[:-4] + "_scaled_255.tif"
+   # general_functions.scale_tif(in_tif=input_tif,out_tif=output_tif,type = "robust")
+    general_functions.scale_layer_to_255(intif=input_tif,outtif=output_tif)
 
 
 if __name__ == "__main__":
