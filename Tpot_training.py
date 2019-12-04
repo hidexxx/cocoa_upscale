@@ -6,7 +6,7 @@ from sklearn import preprocessing
 import general_functions
 import pandas as pd
 import numpy as np
-
+import os
 # def do_TPOT():
 #
 #    if not does_model_exist:
@@ -160,6 +160,44 @@ def train_RS():
                               rescale_predict_image=scale)
 
 
+def test_histmatching_classify():
+    training_tif = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/all_13bands_stack_v2.tif"
+    george_points_tif = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/shp/Training_points_clip_dropTransition_add.tif"
+    input_model = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/george_data_13bands_add_255_eRF_v2.pkl"
+    image_tobe_classified = "/media/ubuntu/Data/Ghana/north_region/s2/images/stacked/with_s1_seg/composite_20180122T102321_T30NWN.tif"
+
+    features, labels = PYEO_model.get_training_data_tif(image_path=training_tif, training_tif_path=george_points_tif)
+
+    scale = preprocessing.MinMaxScaler(feature_range=(0, 255)).fit(features)
+
+    PYEO_model.classify_image(model_path=input_model,
+                              in_image_path=image_tobe_classified,
+                              out_image_path=image_tobe_classified[:-4] + "_classified_13bands_255_eRF2_v4.tif",
+                              rescale_predict_image=scale,
+                              ref_img_for_linear_shift=training_tif,
+                              generate_mask=False)
+
+def do_classify(working_dir):
+    training_tif = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/all_13bands_stack_v2.tif"
+    george_points_tif = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/shp/Training_points_clip_dropTransition_add.tif"
+    input_model = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/george_data_13bands_add_255_eRF_v2.pkl"
+
+    features, labels = PYEO_model.get_training_data_tif(image_path=training_tif, training_tif_path=george_points_tif)
+    scale = preprocessing.MinMaxScaler(feature_range=(0, 255)).fit(features)
+
+    os.chdir(working_dir)
+
+    for image in os.listdir("images/stacked/with_s1_seg"):
+        if image.endswith(".tif"):
+            image_tobe_classified = os.path.join("images/stacked/with_s1_seg",image)
+            out_image_path = os.path.join("output/", image[:-4]+"_13bands_255_eRF.tif")
+
+            PYEO_model.classify_image(model_path=input_model,
+                                      in_image_path=image_tobe_classified,
+                                      out_image_path=out_image_path,
+                                      rescale_predict_image=scale,
+                                      ref_img_for_linear_shift=training_tif,
+                                      generate_mask= False)
 
 
 if __name__ == "__main__":
@@ -167,7 +205,18 @@ if __name__ == "__main__":
    # test_do_grid_search()
     #test_do_classify_image()
   # train_SVM(csv = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/Training_points_clip_dropTransition_point_clean2.csv")
-   train_RS()
+   #train_RS()
+   #test_histmatching_classify()
+   #do_classify(working_dir="/media/ubuntu/Data/Ghana/north_region/s2/")
+   #do_classify(working_dir="/media/ubuntu/Data/Ghana/cocoa_big/s2_batch2/")
+   #do_classify(working_dir="/media/ubuntu/Data/Ghana/cocoa_big/s2/")
+   #test_histmatching_classify()
+
+   #general_functions.do_mask(working_dir="/media/ubuntu/Data/Ghana/cocoa_big/s2_batch2/")
+   #general_functions.do_mask(working_dir="/media/ubuntu/Data/Ghana/cocoa_big/s2/")
+   general_functions.do_mask(working_dir="/media/ubuntu/Data/Ghana/north_region/s2/", generate_mask=False)
+
+
 
 
 

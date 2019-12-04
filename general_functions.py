@@ -171,23 +171,10 @@ def create_stack_image(working_dir,path_to_s1_image):
             ras.stack_images([path_to_image, path_to_s1_image, path_to_brightness], os.path.join("images/stacked/with_s1_seg", image))
 
 
-
 def scale_array_to_255(in_array):
     arr = in_array
     new_arr = ((arr - arr.min()) * (1 / (arr.max() - arr.min()) * 255)).astype(np.uint8)
     return new_arr
-#
-# def scale_layer_to_255(intif, outtif):
-#     g, array = read_tif(intif=intif)
-#     scaled_array = np.zeros(array.shape)
-#     for n in range(array.shape[0]):
-#         arr = array[n,:,:]
-#         arr[arr<0] = 0
-#         new_arr = ((arr - arr.min()) * (1 / (arr.max() - arr.min()) * 255)).astype(np.uint8)
-#         scaled_array[n,:,:] = new_arr
-#     create_tif(filename=outtif,g=g,Nx=array.shape[1], Ny= array.shape[2],new_array= scaled_array,data_type=gdal.GDT_Int16,noData=0)
-#     array = None
-#     scaled_array = None
 
 def scale_layer_to_255(intif, outtif):
     g, array = read_tif(intif=intif, type=np.float)
@@ -224,7 +211,7 @@ def scale_tif(in_tif,out_tif, type = 'robust'):
     create_tif(filename=out_tif,g=g,Nx=arr.shape[1], Ny= arr.shape[2],new_array= arr_scaled,data_type=gdal.GDT_Float32)
 
 
-def plot_hist_all(in_tif):
+def plot_hist_all_density_to_one_graph(in_tif):
     g = gdal.Open(in_tif)
     a = g.GetVirtualMemArray()
 
@@ -256,9 +243,14 @@ def plot_hist(in_tif):
     g = gdal.Open(in_tif)
     a = g.GetVirtualMemArray()
     #fig = pylab.gcf()
+
+    band_name_list = ["ndvi", "ci", "psri", "gndvi", "s2_rep", "ireci", "s2_b", "s2_g",
+                         "s2_r", "s2_nir", "hv", "vv", "seg"]
+
     for band in range(a.shape[0]):
         print('plotting......' + os.path.basename(in_tif))
-        print('band : ' + str(band))
+        band_name = band_name_list[band]
+        print('band : ' + band_name)
         value_array = a[band,:,:]
 
         mask = value_array ==0
@@ -274,7 +266,7 @@ def plot_hist(in_tif):
 
         ax1 = pylab.subplot(a.shape[0],2,band+1)
 
-        ax1.plot(edg[:-1], hist, label='band : ' +str(band))
+        ax1.plot(edg[:-1], hist, label='band : ' +band_name)
         # plt.title( 'histgram of bm generated from different models')
        # ax1.ylabel('Density')
        # ax1.xlabel('Band Value')
@@ -334,7 +326,53 @@ def clean_shp(shape_path, id_field, name_field):
     }
     fix_class_id_from_name(shape_path, id_field, name_field, name_to_id_dict)
 
+def make_msk(in_image_path, apply_msk = False):
+    image, image_array = read_tif(in_image_path)
+    print("Generating extent mask for mosaicing: ")
+    mask_array = image_array[6, :, :] # first 6 bands are vegetation index, band 7-10 are s2 10m bands
+    mask_array[mask_array != 0] = 1
+    create_tif(filename=in_image_path[:-4] + '_mask.msk', g=image, Nx=mask_array.shape[0],
+                                 Ny=mask_array.shape[1],
+                                 new_array=mask_array, data_type=gdal.GDT_UInt16, noData=0)
 
+    if apply_msk:
+        image_out = image * mask_array
+        create_tif(filename=in_image_path[:-4] + '_masked.tif', g=image, Nx=mask_array.shape[0],
+                   Ny=mask_array.shape[1],
+                   new_array=image_out, data_type=gdal.GDT_UInt32, noData=0)
+
+def apply_msk_to_classified_img(in_image_path,in_msk_path,out_image_path):
+    image, image_array = read_tif(in_image_path)
+    msk, msk_array = read_tif(in_msk_path)
+
+    image_masked_array = image_array*msk_array
+
+    create_tif(filename=out_image_path, g=image, Nx=image_array.shape[0],
+                                 Ny=image_array.shape[1],
+                                 new_array=image_masked_array, data_type=gdal.GDT_UInt16, noData=0)
+def make_directory(in_directory):
+    try:
+        os.mkdir(in_directory)
+    except FileExistsError:
+        pass
+
+def do_mask(working_dir, generate_mask = True):
+    os.chdir(working_dir)
+
+    for classifed_image in os.listdir("output/"):
+        if classifed_image.endswith(".tif"):
+            if generate_mask:
+                stack  = os.path.join("images/stacked/with_s1_seg",classifed_image)
+                make_msk(in_image_path=stack)
+
+            out_msk = os.path.join("images/stacked/with_s1_seg",classifed_image[:-4]+'_mask.msk')
+
+            make_directory("output/filtered")
+
+            out_image_path = os.path.join("output/filtered",classifed_image)
+
+            apply_msk_to_classified_img(in_image_path = os.path.join("output/",classifed_image),
+                                        in_msk_path = out_msk, out_image_path= out_image_path)
 
 
 #==============some old code that will be deleted later

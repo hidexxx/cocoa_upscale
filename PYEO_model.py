@@ -17,11 +17,11 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline, make_union
 from tpot.builtins import StackingEstimator
-
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.externals import joblib
-from sklearn.impute import SimpleImputer
+import general_functions
+import hist_matching_plotting
 
 def create_matching_dataset(in_dataset, out_path,
                             format="GTiff", bands=1, datatype=None):
@@ -335,25 +335,56 @@ def train_model_tpot(features, classes, outmodel, generations=5, population_size
     return model, scores
 
 
-def classify_image(in_image_path, model_path, out_image_path,num_chunks =10, rescale_predict_image = None):
+def cal_linear_shift_array(ref_tif, tobe_shift_tif):
+  #  training_tif = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/all_13bands_stack_v2.tif"
+  #  tobe_shift_tif = "/media/ubuntu/Data/Ghana/north_region/s2_NWN/images/stacked/with_s1_seg/composite_20180122T102321_T30NWN.tif"
+
+    g_ref, a_ref = general_functions.read_tif(ref_tif, type= np.float)
+    a_ref_ml = reshape_raster_for_ml(a_ref)
+    a_ref = None
+
+    median_a_ref = hist_matching_plotting.cal_non_zero_median(a_ref_ml)
+    a_ref_ml = None
+
+    g_tobe_shift, a_tobe_shift = general_functions.read_tif(tobe_shift_tif, type=np.float)
+    a_tobe_shift_ml = reshape_raster_for_ml(a_tobe_shift)
+
+    a_tobe_shift = None
+    median_tobe_shift = hist_matching_plotting.cal_non_zero_median(a_tobe_shift_ml)
+
+    diff = np.array(median_a_ref - median_tobe_shift)
+
+    return diff
+    a_tobe_shift_ml = None
+
+def classify_image(in_image_path, model_path, out_image_path,num_chunks =10,
+                   rescale_predict_image = None, ref_img_for_linear_shift = None, generate_mask = True):
+    print("Using model: " + model_path)
     model = joblib.load(model_path)
-    print("Classifying image")
-    image = gdal.Open(in_image_path)
-    image_array = image.GetVirtualMemArray()
+    if generate_mask:
+        image, image_array = general_functions.read_tif(in_image_path)
+        print("Generating extent mask for mosaicing: ")
+        mask_array = image_array[6,:,:]
+        mask_array[mask_array!=0] = 1
+        general_functions.create_tif(filename= in_image_path[:-4]+'_mask.msk',g = image, Nx=mask_array.shape[0],Ny= mask_array.shape[1],
+                                     new_array=mask_array,data_type=gdal.GDT_UInt16, noData=0)
+    else:
+        image = gdal.Open(in_image_path)
+        image_array = image.GetVirtualMemArray()
+
     features_to_classify = reshape_raster_for_ml(image_array)
     width = image.RasterXSize
     height = image.RasterYSize
 
-    imp = SimpleImputer(missing_values= 0, strategy='mean')
-    imp = imp.fit(features_to_classify)
-
-    features_to_classify_filtered = imp.transform(features_to_classify)
-
+    if ref_img_for_linear_shift is not None:
+        diff_array = cal_linear_shift_array(ref_tif= ref_img_for_linear_shift, tobe_shift_tif=in_image_path)
+        features_to_classify_filtered = features_to_classify + diff_array
     if rescale_predict_image is not None:
         features_to_classify_norm = rescale_predict_image.transform(features_to_classify_filtered)
     else:
         features_to_classify_norm = features_to_classify_filtered
 
+    print("Classifying image")
     out_chunks = []
     for i, chunk in enumerate(np.array_split(features_to_classify_norm, num_chunks)):
         print("Classifying {0}".format(i))

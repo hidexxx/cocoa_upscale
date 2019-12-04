@@ -215,8 +215,8 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
                                                out_tif=resample_path_20m, keep_rst_extent=False)
 
 
-                   # generate_veg_index_tif(image_path_10m, resample_path_20m, index_image_path)
-                   # ras.stack_images([index_image_path, image_path_10m], "images/stacked/with_indices/" + image)
+                    generate_veg_index_tif(image_path_10m, resample_path_20m, index_image_path)
+                    ras.stack_images([index_image_path, image_path_10m], "images/stacked/with_indices/" + image)
 
                     # Now, we do Highly Experimental Image Segmentation. Please put on your goggles.
                     # SAGA, please.
@@ -237,7 +237,7 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
                     general_functions.create_tif(filename=temp_pre_seg_path,g=g,Nx=arr.shape[1],Ny=arr.shape[2],
                                                  new_array=array_to_classify,noData=0,data_type=gdal.GDT_UInt32)
                     out_segment_tif = os.path.join("segmentation", image)
-                  #  segment_image(temp_pre_seg_path, out_segment_tif)
+                    segment_image(temp_pre_seg_path, out_segment_tif)
 
 
                     print('Generate brighness raster from the segments')
