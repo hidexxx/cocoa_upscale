@@ -7,7 +7,6 @@ import os
 
 from osgeo import gdal, gdal_array
 import numpy as np
-import s2_functions
 import general_functions
 def read_tif(intif,type = np.float):
     g = gdal.Open(intif)

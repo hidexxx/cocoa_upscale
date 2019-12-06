@@ -211,10 +211,11 @@ if __name__ == "__main__":
    #do_classify(working_dir="/media/ubuntu/Data/Ghana/cocoa_big/s2_batch2/")
    #do_classify(working_dir="/media/ubuntu/Data/Ghana/cocoa_big/s2/")
    #test_histmatching_classify()
+   do_classify(working_dir="/media/ubuntu/storage/cameroon/s2/")
 
    #general_functions.do_mask(working_dir="/media/ubuntu/Data/Ghana/cocoa_big/s2_batch2/")
    #general_functions.do_mask(working_dir="/media/ubuntu/Data/Ghana/cocoa_big/s2/")
-   general_functions.do_mask(working_dir="/media/ubuntu/Data/Ghana/north_region/s2/", generate_mask=False)
+   #general_functions.do_mask(working_dir="/media/ubuntu/Data/Ghana/north_region/s2/", generate_mask=False)
 
 
 

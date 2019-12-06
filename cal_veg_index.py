@@ -3,7 +3,9 @@ from osgeo import gdal
 
 import general_functions
 
-import s2_functions
+from previous_code import s2_functions
+
+
 def clear_nan(inarr):
     inarr[np.isnan(inarr)] = 0
     return inarr
@@ -160,8 +162,8 @@ def test_generate_veg_tif():
 def do_generate_veg_tif():
     merge_10m_dir = "/media/ubuntu/Data/Ghana/cocoa_big/north_region/s2/merge_10m"
     merge_20m_dir = "/media/ubuntu/Data/Ghana/cocoa_big/north_region/s2/merge_20m"
-    tif_10m_list = s2_functions.search_files_fulldir(input_path=merge_10m_dir,search_type='end',search_key='_clip.tif')
-    tif_20m_list = s2_functions.search_files_fulldir(input_path=merge_20m_dir,search_type='end',search_key='10m_clip.tif')
+    tif_10m_list = s2_functions.search_files_fulldir(input_path=merge_10m_dir, search_type='end', search_key='_clip.tif')
+    tif_20m_list = s2_functions.search_files_fulldir(input_path=merge_20m_dir, search_type='end', search_key='10m_clip.tif')
 
 
     for n in range(len(tif_10m_list)):

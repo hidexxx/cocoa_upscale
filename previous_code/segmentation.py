@@ -1,10 +1,7 @@
-import skimage
 from skimage.segmentation import quickshift
-from skimage.filters import median
-from skimage.morphology import cube
 import numpy as np
 import gdal
-import s2_functions
+from previous_code import s2_functions
 
 
 def exhaustive_quickshift_image_search(in_path, out_dir):

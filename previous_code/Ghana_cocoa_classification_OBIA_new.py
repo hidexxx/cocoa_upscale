@@ -1,31 +1,14 @@
-import os
-import pdb
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.svm import SVC
-from sklearn.preprocessing import StandardScaler
-from sklearn.datasets import load_iris
-from sklearn.model_selection import StratifiedShuffleSplit
-from sklearn.model_selection import GridSearchCV
 from sklearn.externals import joblib
-import site
-import glob2
-from osgeo import ogr,osr,gdal, gdal_array
 import sys
 import PYEO_model
-from sklearn import svm
+
 lib_path = "/home/ubuntu/Documents/Code/pyeo/"
 sys.path.append(lib_path)
 #from pyeo.apps.model_creation.download_and_preproc_area import main as dl_and_preproc
-import s2_functions
-import pandas as pd
 
 #import pyeo.queries_and_downloads
 #import pyeo.raster_manipulation
 #import pyeo.filesystem_utilities
-
-import pdb
-from skimage import segmentation
 
 
 #########################################################################

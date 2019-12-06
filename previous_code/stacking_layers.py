@@ -1,6 +1,4 @@
 import os
-import s2_functions
-import pyeo.raster_manipulation as ras
 
 s2_testsite = "/media/ubuntu/Data/Ghana/cocoa_upscale_test/s2/composites/10m/s2_20180219_testsite.tif"
 

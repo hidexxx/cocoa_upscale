@@ -105,20 +105,6 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
     os.chdir(working_dir)
     # fu.create_file_structure(os.getcwd())
     #
-    # make_directory("images/merged/10m")
-    # make_directory("images/merged/20m")
-    #
-    # make_directory("images/stacked/with_indices")
-    # make_directory("images/stacked/with_s1_seg")
-    # make_directory("images/stacked/all_19bands")
-    #
-    # make_directory("segmentation")
-    # make_directory("composites")
-    # make_directory("composites/10m")
-    # make_directory("composites/20m")
-    #
-    # make_directory("composites/10m_full")
-    # make_directory("composites/20m_full")
     general_functions.make_all_dirs(working_dir)
 
 
@@ -174,20 +160,13 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
                 image_path_10m_clipped = os.path.join("composites/10m", image)
                 image_path_20m_clipped = os.path.join("composites/20m", image)
 
-                # config = configparser.ConfigParser()
-                # conf = config.read(path_to_config)
-                # print(conf)
-                # aoi = config['cocoa_mapping']['path_to_aoi']
-
-                aoi = "/media/ubuntu/Data/Ghana/cocoa_big/shp/cocoa_big.shp"
-
-                ras.clip_raster(raster_path=image_path_10m_full, aoi_path=aoi,
-                                out_path=image_path_10m_clipped,srs_id = 32630)
-                ras.clip_raster(raster_path=image_path_20m_full, aoi_path=aoi,
-                                out_path=image_path_20m_clipped, srs_id=32630)
+                ras.clip_raster(raster_path=image_path_10m_full, aoi_path=path_to_aoi,
+                                out_path=image_path_10m_clipped,srs_id = 32632)
+                ras.clip_raster(raster_path=image_path_20m_full, aoi_path=path_to_aoi,
+                                out_path=image_path_20m_clipped, srs_id=32632)
 
 
-    do_segmentation = True
+    do_segmentation = False
     if do_segmentation == True:
         for image in os.listdir("composites/10m"):
             if image.endswith(".tif"):
@@ -206,7 +185,7 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
 
                     # This bit's your show, Qing
                     temp_s1_outline_path = os.path.join(td, "s1_outline.shp")
-                    ras.get_extent_as_shp(
+                    general_functions.get_extent_as_shp(
                         in_ras_path=image_path_10m,
                         out_shp_path=temp_s1_outline_path
                     )
@@ -247,7 +226,7 @@ def build_cocoa_map(working_dir, path_to_aoi, start_date, end_date, path_to_s1_i
                     out_brightness_value_ras = os.path.join("segmentation/brightness", image)
                     output_filtered_value_ras = False
 
-                    ras.get_extent_as_shp(
+                    general_functions.get_extent_as_shp(
                         in_ras_path=temp_pre_seg_path,
                         out_shp_path=temp_shp_path
                     )
@@ -299,6 +278,8 @@ if __name__ == "__main__":
                                                  "for this run of the cocoa map")
     args = parser.parse_args()
 
+    abs_path_to_config = os.path.abspath(args.path_to_config)
+
     config = configparser.ConfigParser()
     config.read(args.path_to_config)
 
@@ -307,4 +288,4 @@ if __name__ == "__main__":
     # Note for future maintainers; the '**' operator unpacks a dictionary (in this case, cocoa_args) into a set
     # of keyword augments for a function. So this should pass the keywords in the config file straight into
     # the build_cocoa_map function without us having to retype them by hand every time they change.
-    build_cocoa_map(path_to_config=args.path_to_config, **cocoa_args)
+    build_cocoa_map(path_to_config=abs_path_to_config, **cocoa_args)

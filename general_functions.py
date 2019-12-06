@@ -374,6 +374,37 @@ def do_mask(working_dir, generate_mask = True):
             apply_msk_to_classified_img(in_image_path = os.path.join("output/",classifed_image),
                                         in_msk_path = out_msk, out_image_path= out_image_path)
 
+def get_extent_as_shp(in_ras_path, out_shp_path):
+    """"""
+    #By Qing
+    os.system('gdaltindex ' + out_shp_path + ' ' + in_ras_path)
+    return out_shp_path
+
+
+def make_all_dirs(working_dir):
+    os.chdir(working_dir)
+    make_directory("images")
+    make_directory("images/merged")
+    make_directory("images/merged/10m")
+    make_directory("images/merged/20m")
+
+    make_directory("images/stacked")
+    make_directory("images/stacked/with_indices")
+    make_directory("images/stacked/with_s1_seg")
+    make_directory("images/stacked/all_19bands")
+
+    make_directory("composites")
+    make_directory("composites/10m")
+    make_directory("composites/20m")
+    make_directory("composites/10m_full")
+    make_directory("composites/20m_full")
+
+    make_directory("segmentation")
+
+    make_directory("output")
+
+    make_directory("log")
+
 
 #==============some old code that will be deleted later
 # def generate_seg_rst():

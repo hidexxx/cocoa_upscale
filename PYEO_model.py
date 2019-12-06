@@ -8,17 +8,10 @@ from sklearn.model_selection import cross_val_score
 import scipy.sparse as sp
 import pickle
 import learning_model
-import pdb
-import s2_functions
+from previous_code import s2_functions
 from tpot import TPOTClassifier
 import pandas as pd
-from sklearn.ensemble import ExtraTreesClassifier
-from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
-from sklearn.pipeline import make_pipeline, make_union
-from tpot.builtins import StackingEstimator
-from sklearn.feature_selection import VarianceThreshold
-from sklearn.naive_bayes import BernoulliNB
 from sklearn.externals import joblib
 import general_functions
 import hist_matching_plotting
@@ -183,7 +176,7 @@ def get_training_data_for_Ciaran_dir(training_image_file_paths, bands,attribute=
     return X_train,y_train
 
 def train_cairan_model_dir(image_dir,outModel_path,bands,attribute = 'CODE'):
-    image_paths = s2_functions.search_files_fulldir(input_path=image_dir,search_key='.tif',search_type='end')
+    image_paths = s2_functions.search_files_fulldir(input_path=image_dir, search_key='.tif', search_type='end')
     X_train,y_train = get_training_data_for_Ciaran_dir(training_image_file_paths=image_paths,attribute=attribute,bands=bands)
 
    # export_training(y_train = y_train, out_dir = image_dir, summary_type='type')
@@ -227,7 +220,7 @@ def train_cairan_model(image_path,shp_path, outModel_path,bands,attribute = 'COD
     print(model.score(X_test, y_test))
 
 def train_cairan_model_addNDVI_dir(image_dir,outModel_path,bands,attribute = 'CODE'):
-    image_paths = s2_functions.search_files_fulldir(input_path=image_dir,search_key='.tif',search_type='end')
+    image_paths = s2_functions.search_files_fulldir(input_path=image_dir, search_key='.tif', search_type='end')
     X_train,y_train = get_training_data_for_Ciaran_dir(training_image_file_paths=image_paths,attribute=attribute,bands=bands)
 
     s0_before = X_train[:,0:4];s0_after = X_train[:,4:8]

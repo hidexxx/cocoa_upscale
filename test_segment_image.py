@@ -1,5 +1,4 @@
-from build_cocoa_map import segment_image
-from general_functions import clip_rst, clip_dir,clip_rst_by_rst
+from general_functions import clip_rst, clip_rst_by_rst
 import os
 
 # def test_segment_image():

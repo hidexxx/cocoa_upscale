@@ -1,9 +1,7 @@
 from osgeo import gdal
-import s2_functions
 import general_functions
 import numpy as np
 import os
-import pdb
 import scipy.ndimage.measurements
 import pyeo.classification as cls
 import pyeo.raster_manipulation as ras

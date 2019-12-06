@@ -1,13 +1,12 @@
 import os
 import shutil
-from os import path
 from tempfile import TemporaryDirectory
 
 from osgeo import gdal
 from pyeo.apps.model_creation.download_and_preproc_area import main as dl_and_preproc
 from pyeo import raster_manipulation as ras
 from pyeo import filesystem_utilities as fs
-import s2_functions
+from previous_code import s2_functions
 import general_functions
 import numpy as np
 
@@ -48,15 +47,47 @@ def do_dl_and_preproc():
                    bands = ("B02", "B03", "B04", "B08"))
     ras.preprocess_sen2_images(l2_dir=l2_dir, out_dir=merge_20m_dir, l1_dir=l1_dir, cloud_threshold=0,
                                                     buffer_size=5, bands=("B02", "B03", "B04","B05","B06","B07","B8A","B11","B12"), out_resolution=20)
-def do_preproc_only():
+
+def move_l1_to_l2dir(l1_dir, l2_dir):
+    for tile in os.listdir(l1_dir):
+        if tile.endswith(".zip"):
+            pass
+        if "MSIL2A" in tile:
+                try:
+                    os.mkdir(l2_dir)
+                except FileExistsError:
+                    pass
+                print("moving.." + tile + " to: " + l2_dir)
+                from_path = os.path.join(l1_dir, tile)
+                to_path = os.path.join(l2_dir, tile)
+                shutil.move(from_path, to_path)
+
+
+def do_atmCorr_merging(working_dir):
+    os.chdir(working_dir)
+
+    general_functions.make_all_dirs(working_dir)
+
+    l1_dir = os.path.join(working_dir,"images/L1")
+    l2_dir = os.path.join(working_dir,"images/L2")
+    merge_10m_dir = os.path.join(working_dir,"images/merged/10m")
+    merge_20m_dir = os.path.join(working_dir,"images/merged/20m")
+
     # ras.atmospheric_correction(in_directory=l1_dir, out_directory=l2_dir,
     #                                                  sen2cor_path=sen2cor_path, delete_unprocessed_image=False)
-
-    ras.preprocess_sen2_images(l2_dir=l2_dir, out_dir=merge_10m_dir, l1_dir=l1_dir, cloud_threshold=0,
-                                                    buffer_size=5, bands=("B02", "B03", "B04", "B08"), out_resolution=10)
     #
-    ras.preprocess_sen2_images(l2_dir=l2_dir, out_dir=merge_20m_dir, l1_dir=l1_dir, cloud_threshold=0,
-                                                    buffer_size=5, bands=("B02", "B03", "B04","B05","B06","B07","B8A","B11","B12"), out_resolution=20)
+    # move_l1_to_l2dir(l1_dir= l1_dir,l2_dir= l2_dir)
+    #
+    # ras.preprocess_sen2_images(l2_dir=l2_dir, out_dir=merge_10m_dir, l1_dir=l1_dir, cloud_threshold=0,
+    #                                                 buffer_size=5, bands=("B02", "B03", "B04", "B08"), out_resolution=10)
+    # #
+    # ras.preprocess_sen2_images(l2_dir=l2_dir, out_dir=merge_20m_dir, l1_dir=l1_dir, cloud_threshold=0,
+    #                                                 buffer_size=5, bands=("B02", "B03", "B04","B05","B06","B07","B8A","B11","B12"), out_resolution=20)
+    #
+    #sort_into_tile(merge_10m_dir)
+    #sort_into_tile(merge_20m_dir)
+    cloud_free_composite_dir(working_dir)
+
 
 def sort_into_tile(indir):
     for merged_tif in os.listdir(indir):
@@ -76,8 +107,6 @@ def do_sort_into_tile():
     sort_into_tile(indir = merge_20m_dir)
 
 
-def build_cloud_free_compoiste(indir, composite_out_dir):
-    ras.composite_directory(image_dir=indir, composite_out_dir=composite_out_dir, format="GTiff", generate_date_images=False)
 
 def clip_to_shp(intif, inshp, outtif):
     os.system('gdalwarp -cutline ' + inshp + ' -srcnodata 0 -dstnodata 0 -overwrite ' + intif + ' ' + outtif)
@@ -117,7 +146,7 @@ def clip_dir():
 
                 time_stap = image.split("_")[2]
 
-                file_list = s2_functions.search_files_fulldir(input_path= os.path.join("images/merged/20m",tile),search_type='contain',search_key=time_stap)
+                file_list = s2_functions.search_files_fulldir(input_path= os.path.join("images/merged/20m", tile), search_type='contain', search_key=time_stap)
 
                 image_suffix = image[-4:]
 
@@ -163,8 +192,7 @@ def move_merge():
             shutil.move(from_path, to_path)
 
 
-def cloud_free_composite_dir():
-    working_dir = "/media/ubuntu/Data/Ghana/cocoa_big/s2_batch2"
+def cloud_free_composite_dir(working_dir):
     os.chdir(working_dir)
 
     merge_10m_dir = "images/merged/10m"
@@ -172,13 +200,13 @@ def cloud_free_composite_dir():
 
     for tile in os.listdir(merge_10m_dir):
         tile_path = os.path.join(merge_10m_dir, tile)
-        this_composite_path = ras.composite_directory(tile_path, "composites/10m")
+        this_composite_path = ras.composite_directory(tile_path, "composites/10m_full")
         new_composite_path = "{}_{}.tif".format(this_composite_path.rsplit('.')[0], tile)
         os.rename(this_composite_path, new_composite_path)
 
     for tile in os.listdir(merge_20m_dir):
         tile_path = os.path.join(merge_20m_dir, tile)
-        this_composite_path = ras.composite_directory(tile_path, "composites/20m")
+        this_composite_path = ras.composite_directory(tile_path, "composites/20m_full")
         new_composite_path = "{}_{}.tif".format(this_composite_path.rsplit('.')[0], tile)
         os.rename(this_composite_path, new_composite_path)
 
@@ -273,8 +301,8 @@ def generate_seg_rst():
     '''
     merge_10m_dir = "/media/ubuntu/Data/Ghana/north_region/s2/composites/10m/"
     merge_20m_dir = "/media/ubuntu/Data/Ghana/north_region/s2/composites/20m/"
-    tif_10m_list = s2_functions.search_files_fulldir(input_path=merge_10m_dir,search_type='end',search_key='NWM.tif')
-    tif_20m_list = s2_functions.search_files_fulldir(input_path=merge_20m_dir,search_type='end',search_key='NWM.tif')
+    tif_10m_list = s2_functions.search_files_fulldir(input_path=merge_10m_dir, search_type='end', search_key='NWM.tif')
+    tif_20m_list = s2_functions.search_files_fulldir(input_path=merge_20m_dir, search_type='end', search_key='NWM.tif')
 
     for n in range(len(tif_10m_list)):
         tif_10m = tif_10m_list[n]
@@ -310,7 +338,7 @@ def do_scale_to255():
 
 if __name__ == "__main__":
     fs.init_log("ghana_s2.log")
-    generate_seg_rst()
+    #generate_seg_rst()
     #do_preproc_only()
     #do_sort_into_tile()
     #cloud_free_composite_dir()
@@ -323,6 +351,7 @@ if __name__ == "__main__":
     #clip_dir()
     #clip_north_region_dir()
     #
+    do_atmCorr_merging(working_dir="/media/ubuntu/storage/cameroon/s2/")
     #plot_hist(in_tif= "/media/ubuntu/Data/Ghana/cocoa_upscale_test/all_13bands_stack.tif")
     #plot_hist(in_tif="/media/ubuntu/Data/Ghana/north_region/s2_NWN/images/stacked/with_s1_seg/composite_20180122T102321_T30NWN.tif")
 

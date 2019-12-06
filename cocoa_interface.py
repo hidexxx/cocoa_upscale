@@ -1,6 +1,5 @@
 from tkinter import ttk
-import configparser
-from build_cocoa_map import build_cocoa_map
+
 
 class CocoaInterface(ttk.Frame):
 
