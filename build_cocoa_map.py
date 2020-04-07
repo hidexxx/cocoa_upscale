@@ -8,16 +8,17 @@ Inputs needed;
 -Last cloud-free pixel composite
 -Path to model
 -Path to output
+-Path to s1
 
 Step 1: Download best S2 L1 and L2
-Step 2: Download nearest S1 that covers AOI
+Step 2: Download nearest S1 that covers AOI(now with the change of ESA download, s1 need to be processed separately)
 Step 3: Generate cloud mask from S2 L1 and L2 OR generate composite
   --Composite must have all S2 bands
 Step 4: Generate indicies from S2 bands
-Step 5: Stack indicies, S2 10m bands, S1 bands
-Step 6: Segment based on stack
-Step 7: Add segment ID layer to stack
-Step 8: Apply classifier
+Step 5: Segment based on S2 bands - calling SAGA QGIS
+Step 6: Stack indicies, S2  bands, S1 bands and segment bands
+Step 7: Apply classifier
+Step 8: Histogram matching over scenes
 
 cocoa_forest_segregation
 """
