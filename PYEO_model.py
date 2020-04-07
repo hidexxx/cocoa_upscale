@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 from sklearn.model_selection import cross_val_score
 import scipy.sparse as sp
 import pickle
-import learning_model
+from Scripts_for_model_building import learning_model
 from previous_code import s2_functions
 from tpot import TPOTClassifier
 import pandas as pd
